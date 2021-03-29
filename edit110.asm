@@ -572,21 +572,21 @@ OSCLI       =       $FFF7
 .L834A      LDY     #$00            ; Get current filing system.
             TYA
             JSR     OSARGS
-            CMP     #$04
-            BCC     L8370
+            CMP     #$04            ; DFS of better?
+            BCC     L8370           ; no, more primitive.
             LDA     #$05            ; Get file attributes.
             JSR     L8241
             JSR     OSFILE
-            CMP     #$01
+            CMP     #$01            ; Is this a file?
             BNE     L8370
-            LDA     L005E
-            ORA     L005F
+            LDA     L005E           ; Check upper bytes of length
+            ORA     L005F           ; must not be > 64K.
             BNE     L8395
-            LDA     L0027
+            LDA     L0027           ; Work out if the file will fit.
             CMP     L005C
             LDA     L0028
             SBC     L005D
-            BCC     L8395
+            BCC     L8395           ; File won't fit.
 .L8370      LDA     L0008
             STA     L0054
             LDA     L0009
@@ -613,25 +613,26 @@ OSCLI       =       $FFF7
 .L83A7      JSR     L9956
             EQUS    "Saving to ",$EA
 .L83B5      JSR     L8311
-            LDX     #$0F
+            LDX     #$0F            ; Clear OSFILE control block.
 .L83BA      STZ     L0054,X
             DEX
             BPL     L83BA
-            DEC     L0058
+            DEC     L0058           ; Set EXEC address to &FFFF
             DEC     L0059
             DEC     L005A
             DEC     L005B
-            LDA     L0012
+            LDA     L0012           ; Set start address.
             STA     L005C
             LDA     L0013
             STA     L005D
-            LDA     L0064
+            LDA     L0064           ; Set end address.
             STA     L0060
             LDA     L0065
             STA     L0061
             LDA     #$00            ; Save file.
             JSR     L8241
             JMP     OSFILE
+
 .L83DF      JSR     L8415
             TYA
             BEQ     L83EF
