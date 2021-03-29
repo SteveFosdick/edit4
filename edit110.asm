@@ -3,6 +3,8 @@
 
             cpu     1
 
+; Zero page workspace.
+
 L0000       =       $0000
 L0001       =       $0001
 L0002       =       $0002
@@ -114,11 +116,20 @@ L00EA       =       $00EA
 L00F2       =       $00F2
 L00FD       =       $00FD
 L00FF       =       $00FF
+
+; References to the stack.
+
 L019F       =       $019F
 L01A0       =       $01A0
+
+; References to OS RAM.
+
 L0202       =       $0202
 L0203       =       $0203
 L020E       =       $020E
+
+; References to the language workspace.
+
 L0400       =       $0400
 L0463       =       $0463
 L0464       =       $0464
@@ -160,9 +171,14 @@ L071E       =       $071E
 L0728       =       $0728
 L0732       =       $0732
 L0733       =       $0733
+
+; Suspect references.
+
 L2034       =       $2034
 L6F66       =       $6F66
-defvec      =       $D940
+
+; References to MOS API
+
 LFF20       =       $FF20
 OSRDRM      =       $FFB9
 VDUCHR      =       $FFBC
@@ -184,6 +200,9 @@ OSWRCH      =       $FFEE
 OSWORD      =       $FFF1
 OSBYTE      =       $FFF4
 OSCLI       =       $FFF7
+
+; Startard ROM Header.
+
             org     $8000
 .langent    JMP     L8134
 .servent    JMP     L80E8
