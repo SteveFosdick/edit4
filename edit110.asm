@@ -564,12 +564,12 @@ OSCLI       =       $FFF7
             JSR     L9956
             EQUS    "Loading ",$EA
 .L8347      JSR     L8311
-.L834A      LDY     #$00
+.L834A      LDY     #$00            ; Get current filing system.
             TYA
             JSR     OSARGS
             CMP     #$04
             BCC     L8370
-            LDA     #$05
+            LDA     #$05            ; Get file attributes.
             JSR     L8241
             JSR     OSFILE
             CMP     #$01
@@ -589,7 +589,7 @@ OSCLI       =       $FFF7
             STZ     L0056
             STZ     L0057
             STZ     L0058
-            LDA     #$FF
+            LDA     #$FF            ; Load file.
             JSR     L8241
             JSR     OSFILE
             STZ     L04FF
@@ -624,7 +624,7 @@ OSCLI       =       $FFF7
             STA     L0060
             LDA     L0065
             STA     L0061
-            LDA     #$00
+            LDA     #$00            ; Save file.
             JSR     L8241
             JMP     OSFILE
 .L83DF      JSR     L8415
@@ -2893,7 +2893,7 @@ OSCLI       =       $FFF7
             JSR     LADD3
             LDX     L0008
             LDY     L0009
-            LDA     #$80
+            LDA     #$80            ; Open file for output.
             JSR     OSFIND
             STA     L004D
             LDY     #$00
@@ -3438,7 +3438,7 @@ OSCLI       =       $FFF7
 .LADD3      LDY     L004D
             BEQ     LADDE
             STZ     L004D
-            LDA     #$00
+            LDA     #$00            ; Close file.
             JSR     OSFIND
 .LADDE      RTS
 .LADDF      ASL     A
