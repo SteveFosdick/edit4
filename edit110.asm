@@ -46,7 +46,7 @@ L0027       =       $0027
 L0028       =       $0028
 L0029       =       $0029
 L002A       =       $002A
-L002B       =       $002B
+options     =       $002B
 L002C       =       $002C
 L002D       =       $002D
 L002E       =       $002E
@@ -82,7 +82,7 @@ L004B       =       $004B
 L004C       =       $004C
 L004D       =       $004D
 L004E       =       $004E
-L004F       =       $004F
+mark_count  =       $004F
 L0050       =       $0050
 L0051       =       $0051
 L0052       =       $0052
@@ -242,19 +242,19 @@ OSCLI       =       $FFF7
             BCC     L8061
             JSR     LADD3
             JSR     LB341
-.L8061      JSR     L84F6
+.L8061      JSR     write_istr
             EQUS    $03,$0F,$EA
 .L8067      JSR     L998D
             JSR     L80D6
             JSR     L9815
-            LDA     L002B
+            LDA     options
             AND     #$07
             CMP     #$05
             BEQ     L80A2
             LDA     (L00FD)
             CMP     #$01
             BNE     L80A2
-            JSR     L84F6
+            JSR     write_istr
             EQUS    "For help type: shf-f5 D RETURN",$0A,$0D,$EA
 .L80A2      JSR     L9968
             EQUS    "Press ESCAPE to continue",$EA
@@ -324,7 +324,7 @@ OSCLI       =       $FFF7
             CLD
             LDX     #$FF
             TXS
-            LDA     #$03
+            LDA     #$03            ; Turn off printer.
             JSR     OSWRCH
             LDA     #$21
             STA     L0202
@@ -416,7 +416,7 @@ OSCLI       =       $FFF7
             LDX     #$08
             LDY     #$10
             JSR     OSBYTE
-            STY     L002B
+            STY     options
             LDA     #$0D
             STA     L0400
             STA     L0464
@@ -547,7 +547,7 @@ OSCLI       =       $FFF7
 .L830C      LDA     #$06
             STA     L0053
             RTS
-.L8311      JSR     LB203
+.L8311      JSR     blk_on_wht
             LDY     #$FF
 .L8316      INY
             LDA     (L0052),Y
@@ -559,7 +559,7 @@ OSCLI       =       $FFF7
             JSR     OSWRCH
             INY
             BRA     L831D
-.L8329      JMP     LB1EF
+.L8329      JMP     wht_on_blk
 .L832C      LDA     L0022
             STA     L0008
             LDA     L0023
@@ -661,13 +661,13 @@ OSCLI       =       $FFF7
 .L8410      RTS
 .L8411      LDY     #$00
             BRA     L83FF
-.L8415      LDA     #$20
+.L8415      LDA     #' '            ; Print a space.
             JSR     OSWRCH
             LDA     #$06
             STA     L0034
             JSR     L8440
             BCC     L8410
-.L8423      JSR     L84F6
+.L8423      JSR     write_istr
             EQUS    $03,$0F,$0D,$EA
 .L842A      LDA     L0024
             CMP     #$02
@@ -772,23 +772,30 @@ OSCLI       =       $FFF7
             BCS     L84ED
             CMP     OSHWM+1
             RTS
-.L84F6      PLA
+            
+; Print the in-line string following the subroutine call.
+
+.write_istr PLA                     ; Store return address as the string address.
             STA     L0000
             PLA
             STA     L0001
-            JSR     L8505
-            JMP     (L0000)
+            JSR     write_str       ; Print the string.
+            JMP     (L0000)         ; Jump to the NOP at the end of the string.
+
+; Print the string whose address is in L0000, terminated by a NOP.
+
 .L8502      JSR     OSWRCH
-.L8505      INC     L0000
+.write_str  INC     L0000           ; Increment to next character.
             BNE     L850B
             INC     L0001
-.L850B      LDA     (L0000)
-            CMP     #$EA
-            BNE     L8502
+.L850B      LDA     (L0000)         ; Fetch character.
+            CMP     #$EA            ; Terminator?
+            BNE     L8502           ; If not, loop and print.
             RTS
+
 .L8512      LDA     #$20
-            EOR     L002B
-.L8516      STA     L002B
+            EOR     options
+.L8516      STA     options
             PHX
             PHY
             TAY
@@ -799,7 +806,7 @@ OSCLI       =       $FFF7
             PLX
             RTS
 .L8525      LDA     #$10
-            BIT     L002B
+            BIT     options
             RTS
 .L852A      JSR     LB363
 .L852D      LDX     L0022
@@ -824,7 +831,7 @@ OSCLI       =       $FFF7
             LDX     L0039
             BNE     L85C1
             TAX
-            LDA     L002B
+            LDA     options
             AND     #$07
             CMP     #$05
             BNE     L85B5
@@ -838,7 +845,7 @@ OSCLI       =       $FFF7
             PHA
             ASL     A
             TAY
-            JSR     L84F6
+            JSR     write_istr
             EQUS    $1A,$1E,$1F,$00,$08,$EA
 .L857D      LDA     L874F,Y
             STA     L0000
@@ -1002,7 +1009,7 @@ OSCLI       =       $FFF7
             STA     (L0012),Y
 .L86D5      DEY
             BPL     L86D1
-            LDX     L004F
+            LDX     mark_count
 .L86DA      DEX
             BMI     L869D
             LDY     L0018,X
@@ -1655,32 +1662,32 @@ OSCLI       =       $FFF7
             BNE     L9819
 .L9815      LDX     #$01
             LDY     #$00
-.L9819      LDA     #$17
+.L9819      LDA     #$17            ; Re-program display character.
             JSR     OSWRCH
             TXA
             JSR     OSWRCH
             TYA
             JSR     OSWRCH
-            JSR     L84F6
+            JSR     write_istr
             EQUS    $00,$00,$00,$00,$00,$00,$00,$EA
 .L9831      RTS
-.L9832      LDA     L002B
+.L9832      LDA     options
             AND     #$07
             CMP     #$02
             BEQ     L9871
             CMP     #$05
             BEQ     L9871
             BRA     L987C
-.L9840      LDA     L002B
+.L9840      LDA     options
             AND     #$07
             CMP     #$02
             BEQ     L984C
             CMP     #$05
             BNE     L987C
 .L984C      PHA
-            JSR     L84F6
+            JSR     write_istr
             EQUS    $1A,$1E,$EA
-.L9853      JSR     LB203
+.L9853      JSR     blk_on_wht
             LDA     #$87
             STA     L0001
             LDA     #$87
@@ -1694,7 +1701,7 @@ OSCLI       =       $FFF7
             LDA     #$B8
             STA     L0000
             JSR     L850B
-.L9871      JSR     LB1EF
+.L9871      JSR     wht_on_blk
             JSR     L988F
             STA     L0031
             JSR     L98A6
@@ -1720,7 +1727,7 @@ OSCLI       =       $FFF7
             SBC     L0030
             STA     L0030
             RTS
-.L98A6      LDA     L002B
+.L98A6      LDA     options
             AND     #$07
             LDY     #$0E
             CMP     #$05
@@ -1728,7 +1735,7 @@ OSCLI       =       $FFF7
             LDY     #$07
             CMP     #$02
             BNE     L98CF
-.L98B6      LDA     #$1C
+.L98B6      LDA     #$1C            ; Define text window.
             JSR     OSWRCH
             LDA     #$00
             JSR     OSWRCH
@@ -1739,7 +1746,7 @@ OSCLI       =       $FFF7
             JSR     OSWRCH
             TYA
             JMP     OSWRCH
-.L98CF      LDA     #$1A
+.L98CF      LDA     #$1A            ; Restore default windows.
             JMP     OSWRCH
 .L98D4      LDA     L0041
             BEQ     L98DD
@@ -1750,25 +1757,25 @@ OSCLI       =       $FFF7
             JMP     L843B
 .L98E3      STZ     L0034
 .L98E5      JSR     L998D
-            JSR     LB203
+            JSR     blk_on_wht
             LDX     L0039
             BEQ     L9903
-            JSR     L84F6
+            JSR     write_istr
             EQUS    "Cursor Editing",$EA
 .L9901      BRA     L9931
 .L9903      JSR     L8525
             BEQ     L9915
-            JSR     L84F6
+            JSR     write_istr
             EQUS    "Insert ",$EA
 .L9913      BRA     L9920
-.L9915      JSR     L84F6
+.L9915      JSR     write_istr
             EQUS    "Over   ",$EA
-.L9920      LDA     L004F
-            ORA     #$30
+.L9920      LDA     mark_count
+            ORA     #$30            ; Convert to digit.
             JSR     OSWRCH
-            JSR     L84F6
+            JSR     write_istr
             EQUS    " marks",$EA
-.L9931      JSR     LB1EF
+.L9931      JSR     wht_on_blk
             LDY     L0030
             INY
             LDA     #$0D
@@ -1785,17 +1792,17 @@ OSCLI       =       $FFF7
             LDX     #$00
 .L995E      LDY     L0030
             INY
-            JSR     L9992
+            JSR     move_crsr
             LDX     #$01
             BRA     L996A
 .L9968      LDX     #$00
-.L996A      JSR     LB203
+.L996A      JSR     blk_on_wht
             PLA
             STA     L0000
             PLA
             STA     L0001
-            JSR     L8505
-            JSR     LB1EF
+            JSR     write_str
+            JSR     wht_on_blk
             TXA
             BEQ     L9984
             LDA     L002F
@@ -1805,11 +1812,11 @@ OSCLI       =       $FFF7
 .L9984      JMP     (L0000)
 .L9987      LDX     L0036
             LDY     L0037
-            BPL     L9992
+            BPL     move_crsr
 .L998D      LDY     L0030
             INY
 .L9990      LDX     #$00
-.L9992      LDA     #$1F
+.move_crsr  LDA     #$1F            ; Move text cursor to X,Y
             JSR     OSWRCH
             TXA
             JSR     OSWRCH
@@ -2023,8 +2030,8 @@ OSCLI       =       $FFF7
             JSR     L9B36
             LDX     L0040
             LDY     L0037
-            JSR     L9992
-            LDA     #$20
+            JSR     move_crsr
+            LDA     #' '
             JSR     OSWRCH
             PLX
             LDY     L0036
@@ -2064,7 +2071,7 @@ OSCLI       =       $FFF7
             STA     L0007
             PLA
             STA     L0006
-            LDY     L004F
+            LDY     mark_count
 .L9B63      DEY
             BMI     L9B82
             LDX     L0018,Y
@@ -2082,11 +2089,11 @@ OSCLI       =       $FFF7
             BRA     L9B63
 .L9B82      RTS
 .L9B83      LDA     #$08
-            EOR     L002B
+            EOR     options
             STZ     L0034
             JSR     L8516
             LDA     #$08
-            AND     L002B
+            AND     options
             BNE     L9BA8
             JSR     L9952
             EQUS    " TAB columns of 8",$EA
@@ -2095,7 +2102,7 @@ OSCLI       =       $FFF7
             EQUS    " TAB below words.",$EA
 .L9BBD      RTS
 .L9BBE      LDA     #$08
-            BIT     L002B
+            BIT     options
             BNE     L9BD6
 .L9BC4      INC     L0036
             LDA     L0036
@@ -2177,7 +2184,7 @@ OSCLI       =       $FFF7
             CMP     HIMEM+1
             BNE     L9C82
             JSR     L980F
-            JSR     L84F6
+            JSR     write_istr
             EQUS    $1A,$0C,$EA
 .L9CA1      JSR     L97B7
             LDA     OSHWM+1
@@ -2296,7 +2303,7 @@ OSCLI       =       $FFF7
             STA     L0043
             LDA     #$02
             STA     L0024
-            JSR     L84F6
+            JSR     write_istr
             EQUS    $1A,$0C,$EA
 .LA520      BIT     L002A
             BMI     LA533
@@ -2304,13 +2311,13 @@ OSCLI       =       $FFF7
             LDA     #$05            ; Set printer driver type.
             JSR     OSBYTE          ; Set it
             JSR     OSBYTE          ; Set if back.  Current type in X.
-            LDA     #$02
+            LDA     #$02            ; Turn on printer.
             JSR     OSWRCH
 .LA533      BIT     L0029
             BMI     LA540
             BIT     L002A
             BPL     LA540
-            LDA     #$0E
+            LDA     #$0E            ; Paged mode on.
             JSR     OSWRCH
 .LA540      LDA     #$4C
             STA     L001A
@@ -2424,7 +2431,7 @@ OSCLI       =       $FFF7
             JSR     L9968
             EQUS    "Print done, press shift key",$EA
 .LA63C      JSR     LADFE
-.LA63F      JSR     L84F6
+.LA63F      JSR     write_istr
             EQUS    $03,$0F,$EA
 .LA645      JSR     LADD3
             LDX     L0010
@@ -2639,7 +2646,7 @@ OSCLI       =       $FFF7
 .LA7D1      PHX
             INY
             JSR     LAB2B
-            LDA     #$01
+            LDA     #$01            ; Next character to printer.
             JSR     OSWRCH
             TXA
             JSR     OSWRCH
@@ -2871,7 +2878,7 @@ OSCLI       =       $FFF7
             LDA     L002A
             BPL     LA999
             JSR     LADFE
-.LA994      LDA     #$0C
+.LA994      LDA     #$0C            ; Clear text area.
             JMP     OSWRCH
 .LA999      JSR     LA994
             JMP     LADFE
@@ -3239,9 +3246,9 @@ OSCLI       =       $FFF7
             ROL     A
             EOR     #$FF
             TSB     L005A
-.LAC3E      LDA     #$17
+.LAC3E      LDA     #$17            ; Re-program display character.
             JSR     OSWRCH
-            LDA     #$20
+            LDA     #' '
             JSR     OSWRCH
             LDX     #$01
 .LAC4A      LDA     L0052,X
@@ -3249,7 +3256,7 @@ OSCLI       =       $FFF7
             INX
             CPX     #$09
             BNE     LAC4A
-            JSR     L84F6
+            JSR     write_istr
             EQUS    " ",$17," ",$00,$00,$00,$00,$00,$00,$00,$00,$EA
 .LAC63      PLX
             PLY
@@ -3276,7 +3283,7 @@ OSCLI       =       $FFF7
             BNE     LAC9A
             BIT     L001E
             BMI     LAC9A
-            LDA     #$20
+            LDA     #' '
             JSR     OSWRCH
             PLA
             RTS
@@ -3779,7 +3786,7 @@ OSCLI       =       $FFF7
             JSR     L98E5
             LDA     L0030
             BRA     LB0A7
-.LB08E      JSR     L84F6
+.LB08E      JSR     write_istr
             EQUS    $1E,$0B,$EA
 .LB094      LDY     L0030
 .LB096      LDA     L0732,Y
@@ -3796,7 +3803,7 @@ OSCLI       =       $FFF7
             TAY
 .LB0B0      PHY
             JSR     L9990
-            LDA     #$20
+            LDA     #' '
             JSR     OSWRCH
             LDA     #$00
             PLY
@@ -3805,13 +3812,13 @@ OSCLI       =       $FFF7
             CMP     L002C
             BCC     LB0F6
             BEQ     LB0F6
-            LDA     #$1C
+            LDA     #$1C            ; Define text window.
             JSR     OSWRCH
             LDA     L002C
             INC     A
             JSR     OSWRCH
             PHX
-            LDA     L002B
+            LDA     options
             AND     #$07
             TAX
             TYA
@@ -3824,7 +3831,7 @@ OSCLI       =       $FFF7
             JSR     OSWRCH
             PLA
             JSR     OSWRCH
-            LDA     #$0C
+            LDA     #$0C            ; Clear text area.
             JSR     OSWRCH
             PHY
             JSR     L98A6
@@ -3847,7 +3854,7 @@ OSCLI       =       $FFF7
             LDX     L0040
 .LB116      PHX
             LDY     L0032
-            JSR     L9992
+            JSR     move_crsr
             PLY
             DEY
 .LB11E      INY
@@ -3860,7 +3867,7 @@ OSCLI       =       $FFF7
             BRA     LB131
 .LB12E      JSR     LB1D0
 .LB131      STY     L002D
-            LDY     L004F
+            LDY     mark_count
 .LB135      DEY
             BMI     LB167
             STY     L002E
@@ -3876,14 +3883,14 @@ OSCLI       =       $FFF7
             BEQ     LB150
             BCS     LB135
 .LB150      LDY     L0032
-            JSR     L9992
+            JSR     move_crsr
             LDA     L002E
             CLC
             ADC     #$31
             JSR     LB1DA
             LDX     L002D
             INX
-            JSR     L9992
+            JSR     move_crsr
             LDY     L002E
             BRA     LB135
 .LB167      LDA     L002D
@@ -3918,7 +3925,7 @@ OSCLI       =       $FFF7
             JMP     LB116
 .LB1A6      LDX     L002D
             LDY     L0032
-            JSR     L9992
+            JSR     move_crsr
             LDA     #$2A
             JSR     LB1DA
             BRA     LB1B9
@@ -3937,32 +3944,34 @@ OSCLI       =       $FFF7
             BRA     LB1DA
 .LB1CD      JMP     OSWRCH
 .LB1D0      LDA     #$20
-            BIT     L002B
+            BIT     options
             BEQ     LB1CD
             LDA     #$0D
 .LB1D8      ORA     #$40
 .LB1DA      PHA
-            LDA     L002B
+            LDA     options
             AND     #$07
             CMP     #$07
             BNE     LB1E8
             PLA
             LDA     #$FF
             BRA     LB1CD
-.LB1E8      JSR     LB203
+.LB1E8      JSR     blk_on_wht
             PLA
             JSR     OSWRCH
-.LB1EF      LDA     #$11
+.wht_on_blk LDA     #$11            ; Define text colour.
             JSR     OSWRCH
-            LDA     #$80
+            LDA     #$80            ; Black background.
             JSR     OSWRCH
-            LDA     #$11
+            LDA     #$11            ; Define text colour.
             JSR     OSWRCH
-            LDA     #$07
+            LDA     #$07            ; White foreground.
             JMP     OSWRCH
-.LB203      JSR     L84F6
+            
+.blk_on_wht JSR     write_istr      ; White background, black foreground.
             EQUS    $11,$87,$11,$00,$EA
 .LB20B      RTS
+
 .LB20C      JSR     L97CB
             BCC     LB215
             LDA     L0036
@@ -4108,7 +4117,7 @@ OSCLI       =       $FFF7
             STA     L0013
             STZ     L0039
             STZ     L0041
-            STZ     L004F
+            STZ     mark_count
             LDA     #$0D
             STA     (OSHWM)
             STA     (L0004)
@@ -4123,17 +4132,17 @@ OSCLI       =       $FFF7
             LDY     L0005
             JSR     L9AC7
             JMP     LBED2
-.LB359      LDA     L002B
+.LB359      LDA     options
             EOR     #$10
             JSR     L8516
             JMP     L98E3
-.LB363      LDA     #$16
+.LB363      LDA     #$16            ; Select screen mode.
             JSR     OSWRCH
-            LDA     L002B
+            LDA     options
             AND     #$07
             TAY
             LDA     LB594,Y
-            ORA     #$80
+            ORA     #$80            ; Use shadow mode.
             JSR     OSWRCH
             LDA     #$83            ; Read OSHWM
             JSR     OSBYTE
@@ -4256,7 +4265,7 @@ OSCLI       =       $FFF7
             EQUS    "Command line",$EA
 .LB4FE      JSR     OSNEWL
             JSR     L980F
-.LB504      LDA     #$2A
+.LB504      LDA     #'*'            ; Give prompt for command.
             JSR     OSWRCH
             LDA     #$00            ; Read input line.
             LDY     #$B5
@@ -4275,11 +4284,11 @@ OSCLI       =       $FFF7
             INC     LFF20
 .LB529      LDA     #$7E            ; Acknowledge Escape condition.
             JSR     OSBYTE
-.LB52E      JSR     L84F6
+.LB52E      JSR     write_istr
             EQUS    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$04,$03,$0F,$0D,$1A,$EA
 .LB541      LDA     #$87            ; Read character and screen mode.
             JSR     OSBYTE
-            LDA     L002B
+            LDA     options
             AND     #$07
             TAX
             LDA     LB594,X
@@ -4287,10 +4296,10 @@ OSCLI       =       $FFF7
             EOR     L0000
             AND     #$07
             BEQ     LB563
-            LDA     #$16
+            LDA     #$16            ; Select screen mode.
             JSR     OSWRCH
             LDA     LB594,X
-            ORA     #$80
+            ORA     #$80            ; Use shadow mode.
             JSR     OSWRCH
 .LB563      JSR     L978C
             JMP     L8534
@@ -4350,9 +4359,9 @@ OSCLI       =       $FFF7
             BCC     LB654
 .LB5FA      PLX
             LDA     #$07
-            TRB     L002B
+            TRB     options
             PLA
-            ORA     L002B
+            ORA     options
             JSR     L8516
             JSR     LB363
 .LB608      LDA     L04FF
@@ -4461,9 +4470,9 @@ OSCLI       =       $FFF7
             JSR     L9956
             EQUS    "At line ",$EA
 .LB6E9      JSR     LBD7A
-            JSR     L84F6
+            JSR     write_istr
             EQUS    ", new line:",$EA
-.LB6FB      JSR     LB1EF
+.LB6FB      JSR     wht_on_blk
             JSR     L83DF
             BNE     LB720
 .LB703      BRK
@@ -5150,7 +5159,7 @@ OSCLI       =       $FFF7
             JSR     L9952
             EQUS    " Not found",$EA
 .LBD79      RTS
-.LBD7A      JSR     LB203
+.LBD7A      JSR     blk_on_wht
             LDX     #$04
             STX     L0000
 .LBD81      STZ     L0001
@@ -5179,7 +5188,7 @@ OSCLI       =       $FFF7
 .LBDB1      EQUB    $00,$00,$00,$03,$27
 .LBDB6      JSR     LBDDF
 .LBDB9      STZ     L003F
-            LDX     L004F
+            LDX     mark_count
 .LBDBD      DEX
             BMI     LBDDE
             LDY     L0018,X
@@ -5210,7 +5219,7 @@ OSCLI       =       $FFF7
 .LBDED      JSR     L9AF8
             JSR     LBDDF
             JSR     LBDB9
-            LDX     L004F
+            LDX     mark_count
             CPX     #$02
             BNE     LBE16
             LDA     L001D
@@ -5226,13 +5235,13 @@ OSCLI       =       $FFF7
             LDY     L001F
             STA     L001F
             STY     L001E
-.LBE16      LDA     L004F
+.LBE16      LDA     mark_count
             STA     L003E
-            STZ     L004F
+            STZ     mark_count
             JSR     L98E5
             LDA     L003E
 .LBE21      RTS
-.LBE22      LDA     L004F
+.LBE22      LDA     mark_count
             BEQ     LBE21
 .LBE26      BRK
             EQUB    $01
@@ -5292,7 +5301,7 @@ OSCLI       =       $FFF7
             EQUB    $01
             EQUS    "Bad marking",$00
 .LBEA7      JSR     L9AF8
-            LDX     L004F
+            LDX     mark_count
             CPX     #$02
             BEQ     LBE99
             LDA     L0012
@@ -5300,7 +5309,7 @@ OSCLI       =       $FFF7
             LDA     L0013
             STA     L001A,X
             JSR     L999F
-            INC     L004F
+            INC     mark_count
             JMP     L98E5
 .LBEC0      JSR     LBDED
             JMP     L999F
@@ -5349,7 +5358,7 @@ OSCLI       =       $FFF7
             STY     L000D
             JSR     L9A93
             LDX     #$02
-            STX     L004F
+            STX     mark_count
             JSR     L98E5
             JMP     L999F
 .LBF29      JSR     LBE76
