@@ -470,7 +470,7 @@ OSCLI       =       $FFF7
 .L827F      PHX
             PHY
             JSR     L8241
-            LDA     #$05
+            LDA     #$05            ; Read a byte from I/O processor memory.
             JSR     OSWORD
             PLY
             PLX
@@ -3204,7 +3204,7 @@ OSCLI       =       $FFF7
             LDA     L0600,Y
             STA     L0052
             JSR     L8241
-            LDA     #$0A
+            LDA     #$0A            ; Read character definition.
             JMP     OSWORD
 .LAC0F      BIT     L001E
             BPL     LAC2A
@@ -4252,7 +4252,7 @@ OSCLI       =       $FFF7
             JSR     L980F
 .LB504      LDA     #$2A
             JSR     OSWRCH
-            LDA     #$00
+            LDA     #$00            ; Read input line.
             LDY     #$B5
             LDX     #$24
             JSR     OSWORD
