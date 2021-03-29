@@ -276,44 +276,46 @@ OSCLI       =       $FFF7
             BNE     L80DB
 .L80E5      JMP     OSNEWL
 
-.service    CMP     #$04
+.service    CMP     #$04            ; Unrecognised command?
             BEQ     srvcmd
-            CMP     #$09
+            CMP     #$09            ; *HELP?
             BNE     srvnhlp
-            LDA     (L00F2),Y
-            CMP     #$0D
+            LDA     (L00F2),Y       ; Next character from command.
+            CMP     #$0D            ; Only respond to empty *HELP.
             BNE     L8103
             PHY
-            LDY     #$07
-.L80F9      LDA     L8106,Y
+            LDY     #$07            ; Print help string.
+.L80F9      LDA     command,Y
             JSR     OSASCI
             DEY
             BPL     L80F9
             PLY
-.L8103      LDA     #$09
+.L8103      LDA     #$09            ; Allow other ROMS to also serve *HELP.
 .srvnhlp    RTS
-.L8106      ORA     L2034
-.L8109      EQUS    "TIDE",$0D
+
+.command    EQUS    $0D,"4 TIDE",$0D
+
 .srvcmd     PHY
             PHX
-            LDX     #$03
-.L8112      LDA     (L00F2),Y
-            CMP     #$2E
-            BEQ     L812E
-            AND     #$DF
-            CMP     L8109,X
+            LDX     #$03            ; Only compare 4 characters.
+.L8112      LDA     (L00F2),Y       ; Get character from command line.
+            CMP     #$2E            ; Abreviation?
+            BEQ     cmdmatch
+            AND     #$DF            ; Make upper case.
+            CMP     command,X       ; Compare with command.
             BNE     L8129
             INY
             DEX
-            BPL     L8112
+            BPL     L8112           ; Loop for all characters.
             LDA     (L00F2),Y
             CMP     #$21
-            BCC     L812E
-.L8129      PLX
+            BCC     cmdmatch
+.L8129      PLX                     ; Command does not match.
             PLY
-            LDA     #$04
+            LDA     #$04            ; Pass on to next ROM.
             RTS
-.L812E      LDA     #$8E            ; Enter this ROM as a language.
+            
+.cmdmatch   LDA     #$8E            ; Enter this ROM as a language.
             PLX
             JMP     OSBYTE
 
