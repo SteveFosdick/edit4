@@ -120,11 +120,10 @@ L00FF       =       $00FF
 L019F       =       $019F
 L01A0       =       $01A0
 
-; References to OS RAM.
+; OS vectors.
 
-L0202       =       $0202
-L0203       =       $0203
-L020E       =       $020E
+BRKV        =       $0202
+WRCHV       =       $020E
 
 ; References to the language workspace.
 
@@ -326,10 +325,10 @@ OSCLI       =       $FFF7
             TXS
             LDA     #$03            ; Turn off printer.
             JSR     OSWRCH
-            LDA     #$21
-            STA     L0202
-            LDA     #$80
-            STA     L0203
+            LDA     #<brkhand
+            STA     BRKV
+            LDA     #>brkhand
+            STA     BRKV+1
             STZ     L04FF
             LDA     #$F2
             STA     L0052
@@ -3292,7 +3291,7 @@ OSCLI       =       $FFF7
             TAY
             LDA     L0600,Y
             PLY
-.LACA1      JMP     (L020E)
+.LACA1      JMP     (WRCHV)
 .LACA4      PHY
             TAY
             LDA     L0600,Y
