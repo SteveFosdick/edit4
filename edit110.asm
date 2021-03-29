@@ -330,30 +330,30 @@ OSCLI       =       $FFF7
             LDA     #>brkhand
             STA     BRKV+1
             STZ     L04FF
-            LDA     #$F2
-            STA     L0052
+            LDA     #$F2            ; Address in I/O processor memory
+            STA     L0052           ; of command line.
             STZ     L0053
             LDA     #$FF
             STA     L0054
             STA     L0055
-            JSR     L827F
+            JSR     get_iobyte      ; Get low byte from I/O processor.
             PHA
-            JSR     L827C
+            JSR     get_io_inc      ; Get high byte from I/O processor.
             STA     L0053
             PLA
-            STA     L0052
+            STA     L0052           ; &52/3 now has address of command.
             LDX     #$14
-.L8165      DEX
-            BEQ     L81E6
-            JSR     L827F
-            JSR     L8246
+.L8165      DEX                     ; Skip over up to 20 characters for
+            BEQ     L81E6           ; the command name, looking for a
+            JSR     get_iobyte      ; space or CR.
+            JSR     inc5253
             CMP     #$0D
             BEQ     L81E6
             CMP     #$20
             BNE     L8165
             LDX     #$00
-.L8178      JSR     L827F
-            JSR     L8246
+.L8178      JSR     get_iobyte      ; Copy 64 bytes from the command
+            JSR     inc5253         ; to the stack.
             STA     L01A0,X
             INX
             CPX     #$40
@@ -362,33 +362,33 @@ OSCLI       =       $FFF7
             STA     L019F,X
             STA     L04C8
             LDY     #$00
-            JSR     L824D
+            JSR     L824D           ; Attempt to parse a small integer.
             BCC     L81BB
-            CMP     #$2C
+            CMP     #','            ; Is next character a comma.
             BNE     L81BB
-            LDA     L0000,X
+            LDA     L0000,X         ; Fetch ZP pointer based on 1st integer.
             STA     L04FC
             LDA     L0001,X
             STA     L04FD
             INY
-            JSR     L824D
+            JSR     L824D           ; Convert a 2nd small integer.
             BCC     L81BB
-            CMP     #$0D
+            CMP     #$0D            ; Check for end of line.
             BNE     L81BB
-            LDA     L0000,X
+            LDA     L0000,X         ; Fetch ZP pointer based on 2nd integer.
             STA     L04FE
             LDA     L0001,X
             STA     L04FF
-            STZ     L0039
+            STZ     L0039           ; Mark as using data already in memory.
             BRA     L81FA
-.L81BB      LDX     #$FF
+.L81BB      LDX     #$FF            ; Wasn't an integer, maybe filename?
 .L81BD      INX
             LDA     L01A0,X
             CMP     #$20
             BEQ     L81BD
             CMP     #$0D
             BEQ     L81E6
-.L81C9      LDA     L01A0,X
+.L81C9      LDA     L01A0,X         ; Copy filename into workspace.
             CMP     #$0D
             BEQ     L81D8
             CMP     #$20
@@ -399,18 +399,18 @@ OSCLI       =       $FFF7
             INX
             CMP     #$0D
             BNE     L81C9
-            LDA     #$01
+            LDA     #$01            ; Flag as file
             STA     L0039
             BRA     L81FA
-.L81E6      LDX     #$FF
+.L81E6      LDX     #$FF            ; Flag as empty buffer.
             STX     L0039
-            LDA     #$0D
+            LDA     #$0D            ; Set a NULL filename.
             STA     L04C8
-            CMP     (OSHWM)
+            CMP     (OSHWM)         ; Is there an old file in memory?
             BNE     L81FA
             CMP     (L0004)
             BNE     L81FA
-            JSR     L84B6
+            JSR     L84B6           ; Attempt to recover old file?
 .L81FA      LDA     #$A1            ; Read the "Edit" byte in CMOS RAM.
             LDX     #$08
             LDY     #$10
@@ -434,16 +434,16 @@ OSCLI       =       $FFF7
             JSR     LB363
             JSR     LB325
             LDY     #$00
-            LDA     #$C8
+            LDA     #$C8            ; Set up pointer to filename.
             STA     L0006
             LDA     #$04
             STA     L0007
-            JSR     L832C
+            JSR     L832C           ; Load file.
             JMP     L8531
 .L8241      LDX     #$52
             LDY     #$00
             RTS
-.L8246      INC     L0052
+.inc5253    INC     L0052
             BNE     L824C
             INC     L0053
 .L824C      RTS
@@ -471,8 +471,8 @@ OSCLI       =       $FFF7
 .L8277      CPX     #$01
             LDX     L0057
             RTS
-.L827C      JSR     L8246
-.L827F      PHX
+.get_io_inc JSR     inc5253
+.get_iobyte PHX
             PHY
             JSR     L8241
             LDA     #$05            ; Read a byte from I/O processor memory.
