@@ -7,8 +7,7 @@
 
 L0000       =       $0000
 L0001       =       $0001
-L0002       =       $0002
-L0003       =       $0003
+OSHWM       =       $0002
 L0004       =       $0004
 L0005       =       $0005
 L0006       =       $0006
@@ -37,8 +36,7 @@ L001C       =       $001C
 L001D       =       $001D
 L001E       =       $001E
 L001F       =       $001F
-L0020       =       $0020
-L0021       =       $0021
+HIMEM       =       $0020
 L0022       =       $0022
 L0023       =       $0023
 L0024       =       $0024
@@ -215,7 +213,7 @@ OSCLI       =       $FFF7
 .brkhand    LDX     #$FF
             TXS
             STZ     L0039
-            LDA     #$7E
+            LDA     #$7E            ; Acknowledge Escape condition.
             JSR     OSBYTE
             LDA     L0024
             CMP     #$FF
@@ -262,7 +260,7 @@ OSCLI       =       $FFF7
 .L80BE      JSR     OSRDCH
             CMP     #$1B
             BNE     L80BE
-.L80C5      LDA     #$7E
+.L80C5      LDA     #$7E            ; Acknowledge Escape condition.
             JSR     OSBYTE
             JSR     L999F
             JMP     L8534
@@ -313,7 +311,7 @@ OSCLI       =       $FFF7
             PLY
             LDA     #$04
             RTS
-.L812E      LDA     #$8E
+.L812E      LDA     #$8E            ; Enter this ROM as a language.
             PLX
             JMP     OSBYTE
 .L8134      CLI
@@ -403,12 +401,12 @@ OSCLI       =       $FFF7
             STX     L0039
             LDA     #$0D
             STA     L04C8
-            CMP     (L0002)
+            CMP     (OSHWM)
             BNE     L81FA
             CMP     (L0004)
             BNE     L81FA
             JSR     L84B6
-.L81FA      LDA     #$A1
+.L81FA      LDA     #$A1            ; Read the "Edit" byte in CMOS RAM.
             LDX     #$08
             LDY     #$10
             JSR     OSBYTE
@@ -764,9 +762,9 @@ OSCLI       =       $FFF7
             STA     L04FF
 .L84ED      CLC
 .L84EE      RTS
-.L84EF      CMP     L0021
+.L84EF      CMP     HIMEM+1
             BCS     L84ED
-            CMP     L0003
+            CMP     OSHWM+1
             RTS
 .L84F6      PLA
             STA     L0000
@@ -788,7 +786,7 @@ OSCLI       =       $FFF7
             PHX
             PHY
             TAY
-            LDA     #$A2
+            LDA     #$A2            ; Write the "Edit" byte in CMOS RAM.
             LDX     #$08
             JSR     OSBYTE
             PLY
@@ -1579,30 +1577,30 @@ OSCLI       =       $FFF7
             EQUB    $61,$72,$65,$20,$70,$75,$74,$20
             EQUB    $69,$6E,$74,$6F,$20,$74,$65,$78
             EQUB    $74,$2E,$0D,$EA
-.L978C      LDA     #$04
-            LDX     #$02
+.L978C      LDA     #$04            ; Disable cursor editing.
+            LDX     #$02            ; Cursor keys act as soft-keys.
             JSR     OSBYTE
-            LDA     #$DB
-            LDX     #$8A
+            LDA     #$DB            ; Read/write TAB character.
+            LDX     #$8A            ; Set to generate &8A.
             LDY     #$00
             JSR     OSBYTE
-            LDA     #$E3
-            LDX     #$A0
+            LDA     #$E3            ; Read/write CTRL+function key status.
+            LDX     #$A0            ; Generate codes starting with &A0.
             LDY     #$00
             JSR     OSBYTE
-            LDA     #$E2
-            LDX     #$90
+            LDA     #$E2            ; Read/write SHIFT+function key status
+            LDX     #$90            ; Generate codes starting with &90.
             LDY     #$00
             JSR     OSBYTE
-            LDX     #$80
-.L97B0      LDA     #$E1
+            LDX     #$80            ; Generate codes starting with &80.
+.L97B0      LDA     #$E1            ; Read/write plain function key status.
             LDY     #$00
             JMP     OSBYTE
-.L97B7      LDA     #$DB
-            LDX     #$09
+.L97B7      LDA     #$DB            ; Read/write TAB character.
+            LDX     #$09            ; Set it back to a real tab.
             LDY     #$00
             JSR     OSBYTE
-            LDA     #$04
+            LDA     #$04            ; Re-enable cursor editing.
             LDX     #$00
             JSR     OSBYTE
             LDX     #$01
@@ -1704,12 +1702,12 @@ OSCLI       =       $FFF7
             JSR     L98E5
             STZ     L0035
             RTS
-.L988F      LDA     #$A0
-            LDX     #$0A
+.L988F      LDA     #$A0            ; Read VDU variable.
+            LDX     #$0A            ; Text window, right column.
             JSR     OSBYTE
             STX     L002F
             STY     L0030
-            LDX     #$08
+            LDX     #$08            ; Text window, left column
             JSR     OSBYTE
             TYA
             CLC
@@ -1870,8 +1868,8 @@ OSCLI       =       $FFF7
             LDA     #$00
             ADC     L000F
             TAY
-            CPX     L0020
-            SBC     L0021
+            CPX     HIMEM
+            SBC     HIMEM+1
             BCS     L9A14
             STX     L000E
             STY     L000F
@@ -2144,14 +2142,14 @@ OSCLI       =       $FFF7
             JSR     LB341
             LDA     L0013
             DEC     A
-            CMP     L0003
+            CMP     OSHWM+1
             BCS     L9C6B
 .L9C42      BRK
             EQUB    $02
             EQUS    "Not enough space to return to language",$00
 .L9C6B      LDA     #$FF
             STA     L0024
-            LDA     L0003
+            LDA     OSHWM+1
             INC     A
             STA     L000B
             STZ     L000A
@@ -2170,13 +2168,13 @@ OSCLI       =       $FFF7
             BNE     L9C82
             INC     L0009
             LDA     L0009
-            CMP     L0021
+            CMP     HIMEM+1
             BNE     L9C82
             JSR     L980F
             JSR     L84F6
             EQUS    $1A,$0C,$EA
 .L9CA1      JSR     L97B7
-            LDA     L0003
+            LDA     OSHWM+1
             INC     A
             STA     L0001
             STZ     L0000
@@ -2297,9 +2295,9 @@ OSCLI       =       $FFF7
 .LA520      BIT     L002A
             BMI     LA533
             LDX     #$00
-            LDA     #$05
-            JSR     OSBYTE
-            JSR     OSBYTE
+            LDA     #$05            ; Set printer driver type.
+            JSR     OSBYTE          ; Set it
+            JSR     OSBYTE          ; Set if back.  Current type in X.
             LDA     #$02
             JSR     OSWRCH
 .LA533      BIT     L0029
@@ -3250,7 +3248,7 @@ OSCLI       =       $FFF7
 .LAC63      PLX
             PLY
             RTS
-.LAC66      LDA     #$7E
+.LAC66      LDA     #$7E            ; Acknowledge Escape condition.
             JSR     OSBYTE
             JMP     LA63F
 .LAC6E      BIT     L00FF
@@ -3463,13 +3461,13 @@ OSCLI       =       $FFF7
 .LADFE      PHX
             PHY
 .LAE00      JSR     L843B
-            LDX     #$FF
+            LDX     #$FF            ; Check shift key status.
             LDY     #$FF
             LDA     #$81
             JSR     OSBYTE
             CPX     #$FF
             BNE     LAE00
-            LDA     #$0F
+            LDA     #$0F            ; Flush buffer.
             LDX     #$FF
             JSR     OSBYTE
             PLY
@@ -3898,7 +3896,7 @@ OSCLI       =       $FFF7
             BEQ     LB19F
             LDA     L0041
             BNE     LB19D
-            LDA     #$81
+            LDA     #$81            ; Scan keyboard.
             LDX     #$00
             LDY     #$00
             JSR     OSBYTE
@@ -4106,7 +4104,7 @@ OSCLI       =       $FFF7
             STZ     L0041
             STZ     L004F
             LDA     #$0D
-            STA     (L0002)
+            STA     (OSHWM)
             STA     (L0004)
 .LB341      LDX     L0022
             LDY     L0023
@@ -4131,25 +4129,25 @@ OSCLI       =       $FFF7
             LDA     LB594,Y
             ORA     #$80
             JSR     OSWRCH
-            LDA     #$83
+            LDA     #$83            ; Read OSHWM
             JSR     OSBYTE
-            STX     L0002
-            STY     L0003
-            LDA     #$84
+            STX     OSHWM
+            STY     OSHWM+1
+            LDA     #$84            ; Read top of user RAM.
             JSR     OSBYTE
-            STX     L0020
-            STY     L0021
+            STX     HIMEM
+            STY     HIMEM+1
             CLC
-            LDA     L0002
+            LDA     OSHWM
             ADC     #$01
             STA     L0022
-            LDA     L0003
+            LDA     OSHWM+1
             ADC     #$00
             STA     L0023
-            LDA     L0020
+            LDA     HIMEM
             SBC     #$00
             STA     L0004
-            LDA     L0021
+            LDA     HIMEM+1
             SBC     #$00
             STA     L0005
             JSR     L9832
@@ -4173,7 +4171,7 @@ OSCLI       =       $FFF7
             RTS
 .LB3C4      JSR     L9956
             EQUS    "Text will be cleared if a key is hit",$EA
-.LB3EC      LDA     #$81
+.LB3EC      LDA     #$81            ; Scan keyboard.
             TAX
             LDY     #$03
             JSR     OSBYTE
@@ -4269,11 +4267,11 @@ OSCLI       =       $FFF7
             BRK
             EQUB    $05
             INC     LFF20
-.LB529      LDA     #$7E
+.LB529      LDA     #$7E            ; Acknowledge Escape condition.
             JSR     OSBYTE
 .LB52E      JSR     L84F6
             EQUS    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$04,$03,$0F,$0D,$1A,$EA
-.LB541      LDA     #$87
+.LB541      LDA     #$87            ; Read character and screen mode.
             JSR     OSBYTE
             LDA     L002B
             AND     #$07
@@ -4328,7 +4326,7 @@ OSCLI       =       $FFF7
             LDA     LB594,Y
             PHA
             JSR     L84B6
-            LDA     #$82
+            LDA     #$82            ; Read machine high order address.
             JSR     OSBYTE
             INX
             BNE     LB5FA
@@ -4338,7 +4336,7 @@ OSCLI       =       $FFF7
             PHA
             ORA     #$80
             TAX
-            LDA     #$85
+            LDA     #$85            ; Read top of user RAM for specified mode.
             JSR     OSBYTE
             CPX     L0010
             TYA
@@ -4352,14 +4350,14 @@ OSCLI       =       $FFF7
             JSR     L8516
             JSR     LB363
 .LB608      LDA     L04FF
-            CMP     L0003
+            CMP     OSHWM+1
             BCC     LB660
-            CMP     L0021
+            CMP     HIMEM+1
             BCS     LB660
             CMP     L04FD
             BCC     LB660
             LDA     L04FD
-            CMP     L0003
+            CMP     OSHWM+1
             BCC     LB660
             LDA     L04FC
             STA     L000A
