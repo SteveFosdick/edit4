@@ -202,14 +202,15 @@ OSCLI       =       $FFF7
 ; Startard ROM Header.
 
             org     $8000
-.langent    JMP     L8134
-.servent    JMP     L80E8
-            EQUB    $C2
-            EQUB    $12
-            EQUB    $01
-            EQUS    "Edit",$00
-            EQUS    "1.00",$00
-            EQUS    "(C)1984 Acorn",$00
+.langent    JMP     language
+.servent    JMP     service
+            EQUB    %11000010       ; ROM type.
+            EQUB    <(copyright-1)  ; Copyright offset.
+            EQUB    $01             ; Binary version.
+            EQUS    "Edit",$00      ; ROM title.
+            EQUS    "1.00",$00      ; ASCII version.
+.copyright  EQUS    "(C)1984 Acorn",$00
+
 .brkhand    LDX     #$FF
             TXS
             STZ     L0039
@@ -274,7 +275,8 @@ OSCLI       =       $FFF7
             INY
             BNE     L80DB
 .L80E5      JMP     OSNEWL
-.L80E8      CMP     #$04
+
+.service    CMP     #$04
             BEQ     srvcmd
             CMP     #$09
             BNE     srvnhlp
@@ -314,7 +316,8 @@ OSCLI       =       $FFF7
 .L812E      LDA     #$8E            ; Enter this ROM as a language.
             PLX
             JMP     OSBYTE
-.L8134      CLI
+
+.language   CLI
             CLD
             LDX     #$FF
             TXS
