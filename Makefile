@@ -8,9 +8,7 @@ bin.hex: edit110.bin
 	xdump edit110.bin > bin.hex
 
 edit110.bin: edit110.asm
-	echo " cpu 1" > temp.asm
-	sed -e '/BIT/s/#/#$$/' -e '/org/s/$$/\n.BeebDisStartAddr/' < edit110.asm >> temp.asm
-	beebasm -v -i temp.asm > edit110.log
+	beebasm -v -i edit110.asm > edit110.log
 
-edit110.asm: edit110.ctl edit110.sym bbc.sym
-	beebdis edit110.ctl
+#edit110.asm: edit110.ctl edit110.sym bbc.sym
+#	beebdis edit110.ctl
