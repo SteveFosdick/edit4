@@ -285,7 +285,7 @@ OSCLI       =       $FFF7
             BNE     L8103
             PHY
             LDY     #$07            ; Print help string.
-.L80F9      LDA     command,Y
+.L80F9      LDA     helpstr,Y
             JSR     OSASCI
             DEY
             BPL     L80F9
@@ -293,7 +293,8 @@ OSCLI       =       $FFF7
 .L8103      LDA     #$09            ; Allow other ROMS to also serve *HELP.
 .srvnhlp    RTS
 
-.command    EQUS    $0D,"4 TIDE",$0D
+.helpstr    EQUS    $0D,"4 "
+.command    EQUS    "TIDE",$0D
 
 .srvcmd     PHY
             PHX
