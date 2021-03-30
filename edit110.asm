@@ -2061,7 +2061,7 @@ OSCLI       =       $FFF7
             DEY
             LDA     (L0008),Y
             STA     L0006
-.LA5AF      CMP     LAF31,X
+.LA5AF      CMP     fmt_tab,X
             BEQ     LA5EC
 .LA5B4      INX
             INX
@@ -2096,7 +2096,7 @@ OSCLI       =       $FFF7
             BRA     LA5FC
 .LA5EA      BRA     LA654
 .LA5EC      LDA     L0007
-            CMP     LAF32,X
+            CMP     fmt_tab+1,X
             BEQ     LA5F7
             LDA     L0006
             BRA     LA5B4
@@ -2111,11 +2111,11 @@ OSCLI       =       $FFF7
             CMP     L0045
             BEQ     LA59C
             LDY     #$00
-.LA60C      JSR     LA8C8
+.LA60C      JSR     fmt_co
             SEC
             JSR     LAAF3
             JMP     LA588
-.LA616      JSR     LA894
+.LA616      JSR     fmt_bp
             BIT     L002A
             BPL     LA63F
             JSR     L9968
@@ -2128,7 +2128,7 @@ OSCLI       =       $FFF7
             LDY     L0011
             JMP     L8531
 .LA64F      LDA     #$FF
-            JMP     (LAF33,X)
+            JMP     (fmt_tab+2,X)
 .LA654      LDA     #$FF
             CMP     L0044
             BNE     LA65D
@@ -2357,7 +2357,8 @@ OSCLI       =       $FFF7
             BPL     LA7F3
             PLX
             JMP     LA775
-.LA7FF      JSR     LAB2B
+
+.fmt_af     JSR     LAB2B
             AND     #$0F
             ASL     A
             TAX
@@ -2375,7 +2376,8 @@ OSCLI       =       $FFF7
             ORA     L0501,X
             STA     L0501,X
             RTS
-.LA81F      JSR     LAB2B
+
+.fmt_an     JSR     LAB2B
             AND     #$0F
             ASL     A
             PHA
@@ -2397,6 +2399,7 @@ OSCLI       =       $FFF7
             AND     #$F0
             STA     L0501,X
             RTS
+
 .LA848      CLC
             STX     L005C
             PLX
@@ -2431,20 +2434,24 @@ OSCLI       =       $FFF7
             ORA     L005C
             STA     L0501,X
             RTS
-.LA88F      STA     L001E
+
+.fmt_bl     STA     L001E
             STA     L0046
             RTS
-.LA894      LDA     L0044
+
+.fmt_bp     LDA     L0044
             JMP     LAA84
-.LA899      LDA     (L0008),Y
+
+.fmt_cc     LDA     (L0008),Y
             STA     L0045
             INY
             RTS
 
-.LA89F      STA     L0017
+.fmt_ce     STA     L0017
             STZ     L0018
             RTS
-.LA8A4      LDA     L0008
+
+.fmt_ch     LDA     L0008
             STA     L0006
             LDA     L0009
             STA     L0007
@@ -2461,8 +2468,10 @@ OSCLI       =       $FFF7
             LDX     #$FF
             TXS
             JMP     LA548
-.LA8C8      LDA     #$0D
+
+.fmt_co     LDA     #$0D
             BRA     LA8D1
+
 .LA8CC      INY
             BNE     LA8D1
             INC     L0009
@@ -2501,7 +2510,8 @@ OSCLI       =       $FFF7
 .LA90A      RTS
 .LA90B      DEY
             RTS
-.LA90D      JSR     LA71B
+
+.fmt_dm     JSR     LA71B
             CMP     #$0D
             BEQ     LA90B
             CMP     #$45
@@ -2517,15 +2527,18 @@ OSCLI       =       $FFF7
             LDA     L0009
             STA     L0531,X
             BRA     LA94B
-.LA930      LDA     #$02
+
+.fmt_ds     LDA     #$02
             STA     L001F
             RTS
-.LA935      LDA     L0008
+
+.fmt_ef     LDA     L0008
             STA     L0518
             LDA     L0009
             STA     L0519
             BRA     LA94B
-.LA941      LDA     L0008
+
+.fmt_eh     LDA     L0008
             STA     L0514
             LDA     L0009
             STA     L0515
@@ -2553,18 +2566,21 @@ OSCLI       =       $FFF7
             BNE     LA94F
             INY
 .LA976      RTS
-.LA977      TSX
+
+.fmt_en     TSX
             CPX     #$FD
             BCS     LA976
             PLA
             PLA
             RTS
-.LA97F      JSR     LA894
+
+.fmt_ep     JSR     fmt_bp
             LDA     L0500
             LSR     A
-            BCS     LA97F
+            BCS     fmt_ep
             RTS
-.LA989      LDA     L0029
+
+.fmt_ff     LDA     L0029
             BMI     LA994
             LDA     L002A
             BPL     LA999
@@ -2573,26 +2589,32 @@ OSCLI       =       $FFF7
             JMP     OSWRCH
 .LA999      JSR     LA994
             JMP     LADFE
-.LA99F      LDA     L0008
+
+.fmt_fo     LDA     L0008
             STA     L051A
             LDA     L0009
             STA     L051B
-            JMP     LA935
-.LA9AC      LDA     L0008
+            JMP     fmt_ef
+
+.fmt_he     LDA     L0008
             STA     L0516
             LDA     L0009
             STA     L0517
-            JMP     LA941
-.LA9B9      PHY
+            JMP     fmt_eh
+
+.fmt_ic     PHY
             JSR     LADD3
             PLY
             RTS
-.LA9BF      JMP     LA94B
-.LA9C2      LDX     L001B
+
+.fmt_ig     JMP     LA94B
+
+.fmt_in     LDX     L001B
             JSR     LAAFD
             STX     L001B
             RTS
-.LA9CA      CLC
+
+.fmt_io     CLC
             JSR     LAAF3
             JSR     LADD3
             LDX     L0008
@@ -2601,8 +2623,9 @@ OSCLI       =       $FFF7
             JSR     OSFIND
             STA     L004D
             LDY     #$00
-            JMP     LA8C8
-.LA9E1      STA     L004B
+            JMP     fmt_co
+
+.fmt_ix     STA     L004B
             CLC
             JSR     LAAF3
             LDA     L0044
@@ -2614,57 +2637,70 @@ OSCLI       =       $FFF7
             STA     L0044
             STZ     L004B
             RTS
-.LA9F7      STZ     L003A
+
+.fmt_ju     STZ     L003A
             RTS
-.LA9FA      LDX     L001A
+
+.fmt_jl     LDX     L001A
             JSR     LAAFD
             STA     L001A
             RTS
-.LAA02      LDX     L001F
+
+.fmt_ls     LDX     L001F
             JSR     LAAFD
             STX     L001F
             RTS
-.LAA0A      JSR     LAB2B
+
+.fmt_lv     JSR     LAB2B
             CMP     L0044
             BEQ     LAA18
             BCC     LAA18
             PHA
-            JSR     LA894
+            JSR     fmt_bp
             PLA
 .LAA18      JMP     LAA84
-.LAA1B      JSR     LAB2B
+
+.fmt_ne     JSR     LAB2B
             CMP     L0044
             BEQ     LAA27
             BCC     LAA27
-            JMP     LA894
+            JMP     fmt_bp
+
 .LAA27      RTS
-.LAA28      STA     L003A
+
+.fmt_nj     STA     L003A
             RTS
-.LAA2B      STA     L0019
+
+.fmt_nn     STA     L0019
             RTS
-.LAA2E      LDA     L0008
+
+.fmt_of     LDA     L0008
             STA     L051A
             LDA     L0009
             STA     L051B
             JMP     LA94B
-.LAA3B      LDA     L0008
+
+.fmt_oh     LDA     L0008
             STA     L0516
             LDA     L0009
             STA     L0517
             JMP     LA94B
-.LAA48      JSR     LA894
+
+.fmt_op     JSR     fmt_bp
             LDA     L0500
             LSR     A
-            BCC     LAA48
+            BCC     fmt_op
             RTS
-.LAA52      CLC
+
+.fmt_os     CLC
             JSR     LAAF3
             LDX     L0008
             LDY     L0009
             JSR     OSCLI
             LDY     #$00
-            JMP     LA8C8
-.LAA62      LDX     L0043
+            JMP     fmt_co
+
+.fmt_pl     LDX     L0043
             JSR     LAAFD
             TXA
             BEQ     LAA73
@@ -2674,14 +2710,17 @@ OSCLI       =       $FFF7
             BEQ     LAA73
             STA     L0044
 .LAA73      RTS
-.LAA74      LDX     L0048
+
+.fmt_po     LDX     L0048
             JSR     LAAFD
             STA     L0048
             RTS
-.LAA7C      STA     L0018
+
+.fmt_rf     STA     L0018
             STZ     L0017
             RTS
-.LAA81      JSR     LAB2B
+
+.fmt_sp     JSR     LAB2B
 .LAA84      TAX
             BEQ     LAAA7
             PHY
@@ -2702,10 +2741,12 @@ OSCLI       =       $FFF7
             BNE     LAA91
             PLY
 .LAAA7      RTS
-.LAAA8      LDA     #$01
+
+.fmt_ss     LDA     #$01
             STA     L001F
             RTS
-.LAAAD      STZ     L004A
+
+.fmt_ta     STZ     L004A
 .LAAAF      JSR     LAB2B
             LDX     L004A
             STA     L051C,X
@@ -2716,18 +2757,21 @@ OSCLI       =       $FFF7
             BEQ     LAAAF
             DEY
             RTS
-.LAAC5      LDA     (L0008),Y
+
+.fmt_tc     LDA     (L0008),Y
             STA     L004E
             INY
             RTS
-.LAACB      LDX     L003B
+
+.fmt_ti     LDX     L003B
             CPX     #$FF
             BNE     LAAD3
             LDX     L001B
 .LAAD3      JSR     LAAFD
             STX     L003B
             RTS
-.LAAD9      LDA     (L0008),Y
+
+.fmt_tr     LDA     (L0008),Y
             CMP     #$0D
             BEQ     LAAED
             TAX
@@ -2740,9 +2784,11 @@ OSCLI       =       $FFF7
             INY
             STA     L0600,X
 .LAAED      RTS
-.LAAEE      STA     L001C
+
+.fmt_ul     STA     L001C
             STA     L0047
             RTS
+
 .LAAF3      TYA
             ADC     L0008
             STA     L0008
@@ -3317,93 +3363,92 @@ OSCLI       =       $FFF7
             EQUB    $20,$58,$4C,$4C,$20,$58,$43,$43
             EQUB    $20,$43,$44,$44,$20,$44,$4D,$4D
             EQUB    $20
-.LAF31      EQUB    $61
-.LAF32      EQUB    $66
-.LAF33      EQUW    LA7FF
+.fmt_tab    EQUS    "af"
+            EQUW    fmt_af
             EQUS    "an"
-            EQUW    LA81F
+            EQUW    fmt_an
             EQUS    "bl"
-            EQUW    LA88F
+            EQUW    fmt_bl
             EQUS    "bp"
-            EQUW    LA894
+            EQUW    fmt_bp
             EQUS    "cc"
-            EQUW    LA899
+            EQUW    fmt_cc
             EQUS    "ce"
-            EQUW    LA89F
+            EQUW    fmt_ce
             EQUS    "ch"
-            EQUW    LA8A4
+            EQUW    fmt_ch
             EQUS    "co"
-            EQUW    LA8C8
+            EQUW    fmt_co
             EQUS    "dm"
-            EQUW    LA90D
+            EQUW    fmt_dm
             EQUS    "ds"
-            EQUW    LA930
+            EQUW    fmt_ds
             EQUS    "ef"
-            EQUW    LA935
+            EQUW    fmt_ef
             EQUS    "eh"
-            EQUW    LA941
+            EQUW    fmt_eh
             EQUS    "en"
-            EQUW    LA977
+            EQUW    fmt_en
             EQUS    "ep"
-            EQUW    LA97F
+            EQUW    fmt_ep
             EQUS    "ff"
-            EQUW    LA989
+            EQUW    fmt_ff
             EQUS    "fo"
-            EQUW    LA99F
+            EQUW    fmt_fo
             EQUS    "he"
-            EQUW    LA9AC
+            EQUW    fmt_he
             EQUS    "ic"
-            EQUW    LA9B9
+            EQUW    fmt_ic
             EQUS    "ig"
-            EQUW    LA9BF
+            EQUW    fmt_ig
             EQUS    "in"
-            EQUW    LA9C2
+            EQUW    fmt_in
             EQUS    "io"
-            EQUW    LA9CA
+            EQUW    fmt_io
             EQUS    "ix"
-            EQUW    LA9E1
+            EQUW    fmt_ix
             EQUS    "ju"
-            EQUW    LA9F7
+            EQUW    fmt_ju
             EQUS    "ll"
-            EQUW    LA9FA
+            EQUW    fmt_jl
             EQUS    "ls"
-            EQUW    LAA02
+            EQUW    fmt_ls
             EQUS    "lv"
-            EQUW    LAA0A
+            EQUW    fmt_lv
             EQUS    "ne"
-            EQUW    LAA1B
+            EQUW    fmt_ne
             EQUS    "nj"
-            EQUW    LAA28
+            EQUW    fmt_nj
             EQUS    "nn"
-            EQUW    LAA2B
+            EQUW    fmt_nn
             EQUS    "of"
-            EQUW    LAA2E
+            EQUW    fmt_of
             EQUS    "oh"
-            EQUW    LAA3B
+            EQUW    fmt_oh
             EQUS    "op"
-            EQUW    LAA48
+            EQUW    fmt_op
             EQUS    "os"
-            EQUW    LAA52
+            EQUW    fmt_os
             EQUS    "pl"
-            EQUW    LAA62
+            EQUW    fmt_pl
             EQUS    "po"
-            EQUW    LAA74
+            EQUW    fmt_po
             EQUS    "rf"
-            EQUW    LAA7C
+            EQUW    fmt_rf
             EQUS    "sp"
-            EQUW    LAA81
+            EQUW    fmt_sp
             EQUS    "ss"
-            EQUW    LAAA8
+            EQUW    fmt_ss
             EQUS    "ta"
-            EQUW    LAAAD
+            EQUW    fmt_ta
             EQUS    "tc"
-            EQUW    LAAC5
+            EQUW    fmt_tc
             EQUS    "ti"
-            EQUW    LAACB
+            EQUW    fmt_ti
             EQUS    "tr"
-            EQUW    LAAD9
+            EQUW    fmt_tr
             EQUS    "ul"
-            EQUW    LAAEE
+            EQUW    fmt_ul
             EQUS    ".h"
             EQUB    $65,$0D,$2E,$65,$6E,$0D,$2E,$66
             EQUB    $6F,$0D,$2E,$63,$65,$0D,$50,$61
