@@ -1891,36 +1891,65 @@ OSCLI       =       $FFF7
             LDX     #$00
             LDY     #$05
             JMP     OSCLI
-            EQUS    $0E,$0D,$0D,"Format commands:- {initial values}",$0D,$0D,".afrn assign format n to "
-            EQUS    "register r {0}",$0D,".anrn assign number to register r {0}",$0D,".bl   bold "
-            EQUS    "line",$0D,".bp   begin page",$0D,".cc c control character is c {.}",$0D,".ce   cen"
-            EQUS    "tre line",$0D,".ch*c chain in next file",$0D,".co   comment line",$0D,".dmcc defin"
-            EQUS    "e macro to .en",$0D,".ds   double space lines",$0D,".ef   even page foot tit"
-            EQUS    "le to .en",$0D,".eh   even page head title to .en",$0D,".en   end of .at, .i"
-            EQUS    "x or .ef etc",$0D,".ep   begin even page",$0D,".ff   form feed the printer, "
-            EQUS    "wait if paged mode",$0D,".fo   even and odd foot title to .en",$0D,".he   ev"
-            EQUS    "en and odd head title to .en",$0D,".ic   close indexfile",$0D,".ig   ignore "
-            EQUS    "input until .en",$0D,".in+- indent left margin n places {0}",$0D,".io*c open"
-            EQUS    " indexfile for output",$0D,".ix   send text to indexfile until .en",$0D,".ju"
-            EQUS    "   justify right margin of lines {on}",$0D,".ll+- line length includin"
-            EQUS    "g indent {76}",$0D,".ls+- line spacing is n {1}",$0D,".lv n leave n blank li"
-            EQUS    "nes (by .ne n and .sp n)",$0D,".ne n needs n output lines, .bp if nece"
-            EQUS    "ssary",$0D,".nj   no justification of lines",$0D,".nn   no new line after th"
-            EQUS    "is line",$0D,".of   odd page foot title to .en",$0D,".oh   odd page head tit"
-            EQUS    "le to .en",$0D,".op   begin odd page",$0D,".os*c call operating system with "
-            EQUS    "this string",$0D,".pl+- text area length is n lines {58}",$0D,".po+- page of"
-            EQUS    "fset is n {0}",$0D,".rf   right flush this line",$0D,".sp n insert n blank l"
-            EQUS    "ines",$0D,".ss   single space lines",$0D,".ta   define tabs {8,16,24,...,96}"
-            EQUS    $0D,".tcc  define tab character as c {ctrl I}",$0D,".ti+- temporary indent"
-            EQUS    " n",$0D,".trcc translate {ctrl J is space}",$0D,".ul   underline line",$0D,$0D,"n rep"
-            EQUS    "resents a decimal number, 0 is used if not present",$0D,"Spaces are al"
-            EQUS    "lowed before n. c represents any character",$0D,"+- allows n, +n or -n"
-            EQUS    ": .in+2 sets an indent 2 more than current",$0D,".ti+2 is a temporary "
-            EQUS    "indent of 2 more than the current indent",$0D,$0D,"Formatting commands wh"
-            EQUS    "ich can appear anywhere",$0D,$0D,".bb   begin bold",$0D,".bu   begin underline",$0D
-            EQUS    ".eb   end bold",$0D,".eu   end underline",$0D,".oc n output CHR$(n) to print"
-            EQUS    "er counted as 1 char",$0D,".on n output CHR$(n) to printer without bei"
-            EQUS    "ng counted",$0D,".r0-9 contents of register e.g. .r0",$0F,$0D,$0D,$EA
+
+            EQUS    $0E,$0D,$0D
+            EQUS    "Format commands:- {initial values}",$0D,$0D
+            EQUS    ".afrn assign format n to register r {0}",$0D
+            EQUS    ".anrn assign number to register r {0}",$0D
+            EQUS    ".bl   bold line",$0D
+            EQUS    ".bp   begin page",$0D
+            EQUS    ".cc c control character is c {.}",$0D
+            EQUS    ".ce   centre line",$0D
+            EQUS    ".ch*c chain in next file",$0D
+            EQUS    ".co   comment line",$0D
+            EQUS    ".dmcc define macro to .en",$0D
+            EQUS    ".ds   double space lines",$0D
+            EQUS    ".ef   even page foot title to .en",$0D
+            EQUS    ".eh   even page head title to .en",$0D
+            EQUS    ".en   end of .at, .ix or .ef etc",$0D
+            EQUS    ".ep   begin even page",$0D
+            EQUS    ".ff   form feed the printer, wait if paged mode",$0D
+            EQUS    ".fo   even and odd foot title to .en",$0D
+            EQUS    ".he   even and odd head title to .en",$0D
+            EQUS    ".ic   close indexfile",$0D
+            EQUS    ".ig   ignore input until .en",$0D
+            EQUS    ".in+- indent left margin n places {0}",$0D
+            EQUS    ".io*c open indexfile for output",$0D
+            EQUS    ".ix   send text to indexfile until .en",$0D
+            EQUS    ".ju   justify right margin of lines {on}",$0D
+            EQUS    ".ll+- line length including indent {76}",$0D
+            EQUS    ".ls+- line spacing is n {1}",$0D
+            EQUS    ".lv n leave n blank lines (by .ne n and .sp n)",$0D
+            EQUS    ".ne n needs n output lines, .bp if necessary",$0D
+            EQUS    ".nj   no justification of lines",$0D
+            EQUS    ".nn   no new line after this line",$0D
+            EQUS    ".of   odd page foot title to .en",$0D
+            EQUS    ".oh   odd page head title to .en",$0D
+            EQUS    ".op   begin odd page",$0D
+            EQUS    ".os*c call operating system with this string",$0D
+            EQUS    ".pl+- text area length is n lines {58}",$0D
+            EQUS    ".po+- page offset is n {0}",$0D
+            EQUS    ".rf   right flush this line",$0D
+            EQUS    ".sp n insert n blank lines",$0D
+            EQUS    ".ss   single space lines",$0D
+            EQUS    ".ta   define tabs {8,16,24,...,96}",$0D
+            EQUS    ".tcc  define tab character as c {ctrl I}",$0D
+            EQUS    ".ti+- temporary indent n",$0D
+            EQUS    ".trcc translate {ctrl J is space}",$0D
+            EQUS    ".ul   underline line",$0D,$0D
+            EQUS    "n represents a decimal number, 0 is used if not present",$0D
+            EQUS    "Spaces are allowed before n. c represents any character",$0D
+            EQUS    "+- allows n, +n or -n: .in+2 sets an indent 2 more than current",$0D
+            EQUS    ".ti+2 is a temporary indent of 2 more than the current indent",$0D,$0D
+            EQUS    "Formatting commands which can appear anywhere",$0D,$0D
+            EQUS    ".bb   begin bold",$0D
+            EQUS    ".bu   begin underline",$0D
+            EQUS    ".eb   end bold",$0D
+            EQUS    ".eu   end underline",$0D
+            EQUS    ".oc n output CHR$(n) to printer counted as 1 char",$0D
+            EQUS    ".on n output CHR$(n) to printer without being counted",$0D
+            EQUS    ".r0-9 contents of register e.g. .r0",$0F,$0D,$0D,$EA
+
 .LA424      LDA     #$B2
             STA     L0000
             LDA     #$9C
