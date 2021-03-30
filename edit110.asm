@@ -793,7 +793,9 @@ OSCLI       =       $FFF7
             BNE     L8502           ; If not, loop and print.
             RTS
 
-.L8512      LDA     #$20
+; shift-f0 - Toggle display returns.
+
+.exec_sf0   LDA     #$20
             EOR     options
 .L8516      STA     options
             PHX
@@ -1021,32 +1023,32 @@ OSCLI       =       $FFF7
             BNE     L86DA
             INC     L001A,X
             BRA     L86DA
-.L86EF      EQUW    LB6B3
-            EQUW    LB4E7
-            EQUW    LB406
-            EQUW    LB42B
-            EQUW    LBC8D
-            EQUW    LBBF3
-            EQUW    LBEA7
-            EQUW    LBEDA
-            EQUW    LA45F
-            EQUW    LB608
+.L86EF      EQUW    exec_f0
+            EQUW    exec_f1
+            EQUW    exec_f2
+            EQUW    exec_f3
+            EQUW    exec_f4
+            EQUW    exec_f5
+            EQUW    exec_f6
+            EQUW    exec_f7
+            EQUW    exec_f8
+            EQUW    exec_f9
             EQUW    L9BBE
             EQUW    L8692
             EQUW    LB20C
             EQUW    LB253
             EQUW    LB266
             EQUW    LB21D
-            EQUW    L8512
-            EQUW    LB359
-            EQUW    LB4B1
-            EQUW    LB3BB
-            EQUW    L9C01
-            EQUW    LB59C
-            EQUW    LBEC0
-            EQUW    LBF29
-            EQUW    LBEC6
-            EQUW    LB3C4
+            EQUW    exec_sf0
+            EQUW    exec_sf1
+            EQUW    exec_sf2
+            EQUW    exec_sf3
+            EQUW    exec_sf4
+            EQUW    exec_sf5
+            EQUW    exec_sf6
+            EQUW    exec_sf7
+            EQUW    exec_sf8
+            EQUW    exec_sf9
             EQUW    L9B83
             EQUW    LB569
             EQUW    LB2EC
@@ -1817,7 +1819,10 @@ OSCLI       =       $FFF7
 .L9BFC      STY     L0036
 .L9BFE      STZ     L0034
 .L9C00      RTS
-.L9C01      JSR     L9956
+
+; shift-f4 - Return to language.
+
+.exec_sf4   JSR     L9956
             EQUS    "Type language name:",$EA
 .L9C18      JSR     L8415
             BEQ     L9C00
@@ -1921,7 +1926,10 @@ OSCLI       =       $FFF7
 .LA456      JSR     LADFE
             JMP     L8534
 .LA45C      JMP     LA424
-.LA45F      JSR     LBE22
+
+; f8 - Print text.
+
+.exec_f8    JSR     LBE22
             LDX     #$FF
             STX     L0029
             STX     L002A
@@ -3813,10 +3821,14 @@ OSCLI       =       $FFF7
             LDY     L0005
             JSR     L9AC7
             JMP     LBED2
-.LB359      LDA     options
+
+; shift-f1 - Toggle insert/overwrite.
+
+.exec_sf1   LDA     options
             EOR     #$10
             JSR     L8516
             JMP     L98E3
+
 .LB363      LDA     #$16            ; Select screen mode.
             JSR     OSWRCH
             LDA     options
@@ -3860,12 +3872,18 @@ OSCLI       =       $FFF7
 .LB3B5      LDA     L0037
             STA     L0051
             BRA     LB3C1
-.LB3BB      STZ     L0050
+
+; shift-f3 - Remove margins
+
+.exec_sf3   STZ     L0050
             LDA     L0030
             STA     L0051
 .LB3C1      STZ     L0034
             RTS
-.LB3C4      JSR     L9956
+
+; shift-f9 - Clear text.
+
+.exec_sf9   JSR     L9956
             EQUS    "Text will be cleared if a key is hit",$EA
 .LB3EC      LDA     #$81            ; Scan keyboard.
             TAX
@@ -3879,13 +3897,19 @@ OSCLI       =       $FFF7
             RTS
 .LB400      JSR     L84B6
             JMP     L852D
-.LB406      JSR     L9956
+
+; f2 - Load file.
+
+.exec_f2    JSR     L9956
             EQUS    "Type filename to load:",$EA
 .LB420      JSR     L83DF
             LDY     #$00
             JSR     L832C
             JMP     L8531
-.LB42B      JSR     LBE54
+
+; f3 - Save file.
+
+.exec_f3    JSR     LBE54
             CMP     #$01
             BEQ     LB454
             JSR     L993C
@@ -3920,7 +3944,10 @@ OSCLI       =       $FFF7
 .LB498      BRK
             EQUB    $01
             EQUS    "Bad use of stored name",$00
-.LB4B1      JSR     LBE22
+
+; shift-f2 - Insert file.
+
+.exec_sf2   JSR     LBE22
             JSR     L9AF8
             JSR     L993C
             EQUS    "to insert:",$EA
@@ -3939,7 +3966,10 @@ OSCLI       =       $FFF7
             LDY     L0009
             JSR     L9A68
             JMP     L999F
-.LB4E7      LDA     #$01
+
+; f1 - Command line.
+
+.exec_f1    LDA     #$01
             STA     L0024
             JSR     L97B7
             JSR     L9956
@@ -3994,7 +4024,10 @@ OSCLI       =       $FFF7
 .LB58D      EQUS    $00
             EQUB    $00,$07,$00,$00,$0E,$00
 .LB594      EQUB    $00,$01,$00,$03,$04,$00,$06,$07
-.LB59C      JSR     L9956
+
+; shift-f5 - Set mode.
+
+.exec_sf5   JSR     L9956
             EQUS    "New Mode:",$EA
 .LB5A9      JSR     L83DF
             BEQ     LB573
@@ -4044,8 +4077,11 @@ OSCLI       =       $FFF7
             PLA
             ORA     options
             JSR     L8516
-            JSR     LB363
-.LB608      LDA     L04FF
+            JSR     LB363           ; Fall through!
+            
+; f9 - old text.
+
+.exec_f9    LDA     L04FF
             CMP     OSHWM+1
             BCC     LB660
             CMP     HIMEM+1
@@ -4127,7 +4163,10 @@ OSCLI       =       $FFF7
             INC     L002E
             BNE     LB67A
 .LB6B2      RTS
-.LB6B3      LDA     #$01
+
+; f0 - Goto line.
+
+.exec_f0    LDA     #$01
             STA     L004B
             STZ     L004C
             LDA     L0022
@@ -4712,7 +4751,10 @@ OSCLI       =       $FFF7
 .LBBEC      LDX     L0014
             LDY     L0015
             JMP     L9AC7
-.LBBF3      JSR     LBE54
+
+; f5 - Global replace
+
+.exec_f5    JSR     LBE54
             JSR     L9956
             EQUS    "Global replace:",$EA
 .LBC09      JSR     L8415
@@ -4767,7 +4809,10 @@ OSCLI       =       $FFF7
 .LBC78      BRK
             EQUB    $01
             EQUS    "No previous string",$00
-.LBC8D      JSR     L9956
+
+; f4 - Find and replace.
+
+.exec_f4    JSR     L9956
             EQUS    "Find and replace:",$EA
 .LBCA2      JSR     L8415
             JSR     L8411
@@ -4981,7 +5026,10 @@ OSCLI       =       $FFF7
 .LBE99      BRK
             EQUB    $01
             EQUS    "Bad marking",$00
-.LBEA7      JSR     L9AF8
+            
+; f6 - Mark place.
+
+.exec_f6    JSR     L9AF8
             LDX     mark_count
             CPX     #$02
             BEQ     LBE99
@@ -4992,9 +5040,15 @@ OSCLI       =       $FFF7
             JSR     L999F
             INC     mark_count
             JMP     L98E5
-.LBEC0      JSR     LBDED
+
+; shift-f6 - Clear marks.
+
+.exec_sf6   JSR     LBDED
             JMP     L999F
-.LBEC6      JSR     LBDED
+            
+; shift-f8 - Marked delete.
+
+.exec_sf8   JSR     LBDED
             JSR     LBE34
             BEQ     LBE99
             STX     L0012
@@ -5003,7 +5057,10 @@ OSCLI       =       $FFF7
             LDA     L0000
             STA     L0036
             RTS
-.LBEDA      JSR     LBE76
+
+; f7 - Marked copy.
+
+.exec_f7    JSR     LBE76
             SEC
             LDA     L001D
             SBC     L001C
@@ -5042,7 +5099,10 @@ OSCLI       =       $FFF7
             STX     mark_count
             JSR     L98E5
             JMP     L999F
-.LBF29      JSR     LBE76
+
+; shift-f7 - Marked move.
+
+.exec_sf7   JSR     LBE76
             LDX     L001C
             LDY     L001E
             LDA     L003F
