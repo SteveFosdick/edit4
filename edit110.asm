@@ -429,7 +429,8 @@ OSCLI       =       $FFF7
             BEQ     L8229
             JMP     L852A
 .L8223      JSR     LB363
-            JMP     LB608
+            JMP     exec_f9
+
 .L8229      STZ     L0024
             JSR     LB363
             JSR     LB325
@@ -2439,6 +2440,7 @@ OSCLI       =       $FFF7
             STA     L0045
             INY
             RTS
+
 .LA89F      STA     L0017
             STZ     L0018
             RTS
@@ -5023,6 +5025,7 @@ OSCLI       =       $FFF7
             DEC     A
             BEQ     LBE99
             RTS
+
 .LBE99      BRK
             EQUB    $01
             EQUS    "Bad marking",$00
