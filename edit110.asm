@@ -822,68 +822,72 @@ OSCLI       =       $FFF7
             LDA     #$06
             STA     L0034
 .L8540      JSR     LAFFD
-            JSR     L9987
+            JSR     text_curs
             JSR     L980F
             LDA     #$05
             STA     L0034
-            JSR     L98D4
+            JSR     L98D4           ; Get input character and check Esc.
             TAX
-            BPL     L85C1
+            BPL     L85C1           ; Probably an ASCII character.
             CMP     #$B0
-            BCS     L85C1
+            BCS     L85C1           ; Too high to be a function key.
             LDX     L0039
-            BNE     L85C1
+            BNE     L85C1           ; Flag set to insert code literally.
             TAX
             LDA     options
             AND     #$07
-            CMP     #$05
+            CMP     #$05            ; Check for describe mode.
             BNE     L85B5
             CPX     #$9C
-            BCS     L85B5
+            BCS     L85B5           ; Out of range for describe.
             CPX     #$90
-            BCS     L8570
+            BCS     L8570           ; It's a shift-function key - describe.
             CPX     #$8A
-            BCS     L85B5
+            BCS     L85B5           ; Out of range for describe.
 .L8570      TXA
             PHA
-            ASL     A
+            ASL     A               ; Convert to a table index.
             TAY
-            JSR     write_istr
+            JSR     write_istr      ; Restore windows, move to line 8.
             EQUS    $1A,$1E,$1F,$00,$08,$EA
-.L857D      LDA     L874F,Y
+.L857D      LDA     L874F,Y         ; Get low byte from table.
             STA     L0000
-            LDA     L874F+1,Y
+            LDA     L874F+1,Y       ; Get hight byte from table.
             STA     L0001
 .L8587      LDY     #$00
             JSR     OSNEWL
-.L858C      LDA     (L0000)
+.L858C      LDA     (L0000)         ; Fetch character.
             INC     L0000
             BNE     L8594
             INC     L0001
-.L8594      CMP     #$0D
-            BEQ     L85A2
-            CMP     #$EA
+.L8594      CMP     #$0D            ; Handle CR separately.
+            BEQ     desc_cr
+            CMP     #$EA            ; End marker (NOP)?
             BEQ     L85AE
             JSR     OSWRCH
             INY
-            BRA     L858C
-.L85A2      LDA     #$20
+            BRA     L858C           ; Loop for next character.
+
+.desc_cr    LDA     #$20            ; Pad to the end of the area.
 .L85A4      CPY     #$36
             BCS     L8587
             JSR     OSWRCH
             INY
             BRA     L85A4
-.L85AE      JSR     L98A6
-            JSR     L9987
+
+.L85AE      JSR     text_win        ; Re-create text window (if used).
+            JSR     text_curs       ; Set the cursor to the insert point.
             PLX
-.L85B5      TXA
+.L85B5      TXA                     ; Convert key to table index.
             ASL     A
             TAX
-            JSR     L85BE
-            JMP     L8540
+            JSR     L85BE           ; Invoke the routine.
+            JMP     L8540           ; Loop for next character.
 .L85BE      JMP     (L86EF,X)
-.L85C1      JSR     L85C7
+
+.L85C1      JSR     L85C7           ; Process non-function character.
             JMP     L8540
+
 .L85C7      CMP     #$7F
             BEQ     L8631
             STZ     L04FF
@@ -1388,7 +1392,7 @@ OSCLI       =       $FFF7
 .L9871      JSR     wht_on_blk
             JSR     L988F
             STA     L0031
-            JSR     L98A6
+            JSR     text_win
 .L987C      JSR     L988F
             TAX
             INX
@@ -1411,10 +1415,10 @@ OSCLI       =       $FFF7
             SBC     L0030
             STA     L0030
             RTS
-.L98A6      LDA     options
+.text_win   LDA     options
             AND     #$07
             LDY     #$0E
-            CMP     #$05
+            CMP     #$05            ; Describe mode?
             BEQ     L98B6
             LDY     #$07
             CMP     #$02
@@ -1494,7 +1498,7 @@ OSCLI       =       $FFF7
             LDY     L0030
             STA     L0733,Y
 .L9984      JMP     (L0000)
-.L9987      LDX     L0036
+.text_curs  LDX     L0036
             LDY     L0037
             BPL     move_crsr
 .L998D      LDY     L0030
@@ -1723,7 +1727,7 @@ OSCLI       =       $FFF7
             STA     (L0012),Y
             DEX
             BNE     L9B23
-.L9B29      JMP     L9987
+.L9B29      JMP     text_curs
 .L9B2C      SEC
             LDA     L0036
             SBC     L0040
@@ -3449,11 +3453,8 @@ OSCLI       =       $FFF7
             EQUW    fmt_tr
             EQUS    "ul"
             EQUW    fmt_ul
-            EQUS    ".h"
-            EQUB    $65,$0D,$2E,$65,$6E,$0D,$2E,$66
-            EQUB    $6F,$0D,$2E,$63,$65,$0D,$50,$61
-            EQUB    $67,$65,$20,$2E,$72,$30,$0D,$2E
-            EQUB    $66,$66,$2E,$65,$6E,$0D
+            EQUS    ".he",$0D,".en",$0D,".fo",$0D,".ce",$0D
+            EQUS    "Page .r0",$0D,".ff.en",$0D
 .LAFFD      JSR     L97E3
             STA     L0040
             TAY
@@ -3570,7 +3571,7 @@ OSCLI       =       $FFF7
             LDA     #$0C            ; Clear text area.
             JSR     OSWRCH
             PHY
-            JSR     L98A6
+            JSR     text_win
             PLY
 .LB0F6      LDA     L002C
             STA     L0732,Y
@@ -4901,7 +4902,7 @@ OSCLI       =       $FFF7
             STA     L0034
             JSR     L9956
             EQUS    "R(eplace), C(ontinue) or ESCAPE",$EA
-.LBD1B      JSR     L9987
+.LBD1B      JSR     text_curs
             JSR     L980F
 .LBD21      JSR     LBBE6
             CMP     #$63
