@@ -240,7 +240,7 @@ OSCLI       =       $FFF7
             BEQ     L80D0
             BCC     L8061
             JSR     LADD3
-            JSR     LB341
+            JSR     ctl_up
 .L8061      JSR     write_istr
             EQUS    $03,$0F,$EA
 .L8067      JSR     L998D
@@ -674,7 +674,7 @@ OSCLI       =       $FFF7
             CMP     #$02
             BNE     L8436
             JSR     LADD3
-            JSR     LB341
+            JSR     ctl_up
 .L8436      STZ     L0039
             JMP     L80C5
 .L843B      BIT     L00FF
@@ -821,7 +821,7 @@ OSCLI       =       $FFF7
             JSR     L978C
             LDA     #$06
             STA     L0034
-.L8540      JSR     LAFFD
+.main_loop  JSR     LAFFD
             JSR     text_curs
             JSR     L980F
             LDA     #$05
@@ -882,27 +882,27 @@ OSCLI       =       $FFF7
             ASL     A
             TAX
             JSR     L85BE           ; Invoke the routine.
-            JMP     L8540           ; Loop for next character.
+            JMP     main_loop       ; Loop for next character.
 .L85BE      JMP     (L86EF,X)
 
 .L85C1      JSR     L85C7           ; Process non-function character.
-            JMP     L8540
+            JMP     main_loop
 
 .L85C7      CMP     #$7F
             BEQ     L8631
             STZ     L04FF
             CMP     #$0D
             BNE     L85E3
-            JSR     L8525
+            JSR     L8525           ; Check bit 4 of options.
             BNE     L85E1
             JSR     L97D4
             BCS     L85E1
             STZ     L0036
-            JMP     LB266
+            JMP     curs_down
 .L85E1      LDA     #$0D
 .L85E3      PHA
             JSR     L9B08
-            JSR     L8525
+            JSR     L8525           ; Check bit 4 of options.
             BNE     L85F4
             LDY     L0036
             LDA     (L0012),Y
@@ -911,7 +911,7 @@ OSCLI       =       $FFF7
 .L85F4      LDX     #$01
             LDA     L0036
             JSR     L9B36
-.L85FB      PLA
+.L85FB      PLA                     ; Store character in buffer.
             LDY     L0036
             STA     (L0012),Y
             CMP     #$0D
@@ -921,29 +921,30 @@ OSCLI       =       $FFF7
             LDY     L0037
             JSR     LB0BC
             STZ     L0036
-            JSR     LB266
+            JSR     curs_down
 .L8613      LDA     L0034
             BEQ     L861A
             JSR     LAFFD
 .L861A      LDA     #$02
             STA     L0034
 .L861E      RTS
-.L861F      JSR     LB1C1
-            JSR     LB253
+.L861F      JSR     LB1C1           ; Display the new character.
+            JSR     curs_right      ; Advance the cursor.
 .L8625      LDA     L0034
             BEQ     L862C
             JSR     LAFFD
 .L862C      LDA     #$01
             STA     L0034
             RTS
+
 .L8631      JSR     L9B2C
             BEQ     L8639
-            JMP     LB20C
+            JMP     curs_left
 .L8639      LDA     L0036
             BNE     L8642
             JSR     L97CB
             BCS     L861E
-.L8642      JSR     LB20C
+.L8642      JSR     curs_left
             JSR     L97E3
             CMP     L0036
             BCS     L864E
@@ -969,18 +970,19 @@ OSCLI       =       $FFF7
             BRA     L8625
 .L8675      JSR     L86B6
             BRA     L8613
-.L867A      JSR     L8692
-.L867D      STZ     L0036
+.L867A      JSR     exec_copy
+.ctl_copy   STZ     L0036
             LDA     (L0012)
             CMP     #$0D
             BNE     L867A
             JSR     L97E3
             STA     L0040
-            JSR     L8692
+            JSR     exec_copy
             LDA     #$02
             STA     L0034
             RTS
-.L8692      JSR     L97D4
+
+.exec_copy  JSR     L97D4
             BCC     L869E
             LDA     L0036
             CMP     L0040
@@ -1038,12 +1040,12 @@ OSCLI       =       $FFF7
             EQUW    exec_f7
             EQUW    exec_f8
             EQUW    exec_f9
-            EQUW    L9BBE
-            EQUW    L8692
-            EQUW    LB20C
-            EQUW    LB253
-            EQUW    LB266
-            EQUW    LB21D
+            EQUW    exec_tab
+            EQUW    exec_copy
+            EQUW    curs_left
+            EQUW    curs_right
+            EQUW    curs_down
+            EQUW    curs_up
             EQUW    exec_sf0
             EQUW    exec_sf1
             EQUW    exec_sf2
@@ -1054,28 +1056,28 @@ OSCLI       =       $FFF7
             EQUW    exec_sf7
             EQUW    exec_sf8
             EQUW    exec_sf9
-            EQUW    L9B83
-            EQUW    LB569
-            EQUW    LB2EC
-            EQUW    LB2B5
-            EQUW    L9ABD
-            EQUW    L9A5E
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    LB3AF
-            EQUW    LB3B5
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L8540
-            EQUW    L867D
-            EQUW    LB248
-            EQUW    LB24C
-            EQUW    LB34B
-            EQUW    LB341
+            EQUW    shift_tab
+            EQUW    shift_copy
+            EQUW    shift_left
+            EQUW    shift_rght
+            EQUW    shift_down
+            EQUW    shift_up
+            EQUW    main_loop       ; ctl-f0
+            EQUW    main_loop       ; ctl-f1
+            EQUW    main_loop       ; ctl-f2
+            EQUW    main_loop       ; ctl-f3
+            EQUW    main_loop       ; ctl-f4
+            EQUW    main_loop       ; ctl-f5
+            EQUW    exec_cf6        ; ctl-f6
+            EQUW    exec_cf7        ; ctl-f7
+            EQUW    main_loop       ; ctl-f8
+            EQUW    main_loop       ; ctl-f9
+            EQUW    main_loop       ; ctl-tab
+            EQUW    ctl_copy        ; ctl-copy      
+            EQUW    ctl_left        ; ctl-left
+            EQUW    ctl_right       ; ctl-right
+            EQUW    ctl_down        ; ctl-down
+            EQUW    ctl_up
 
 .L874F      EQUW    help_f0,help_f1,help_f2,help_f3
             EQUW    help_f4,help_f5,help_f6,help_f7
@@ -1614,7 +1616,8 @@ OSCLI       =       $FFF7
             BCC     L9A24
 .L9A5C      TXA
 .L9A5D      RTS
-.L9A5E      LDA     L0030
+
+.shift_up   LDA     L0030
             INC     A
 .L9A61      JSR     L9A15
             LDX     L000E
@@ -1667,7 +1670,8 @@ OSCLI       =       $FFF7
             DEC     L000D
             BNE     L9AAA
 .L9ABC      RTS
-.L9ABD      LDA     L0030
+
+.shift_down LDA     L0030
             INC     A
 .L9AC0      JSR     L99DA
 .L9AC3      LDX     L000E
@@ -1776,7 +1780,8 @@ OSCLI       =       $FFF7
             STA     L001A,Y
             BRA     L9B63
 .L9B82      RTS
-.L9B83      LDA     #$08
+
+.shift_tab  LDA     #$08
             EOR     options
             STZ     L0034
             JSR     L8516
@@ -1789,7 +1794,8 @@ OSCLI       =       $FFF7
 .L9BA8      JSR     L9952
             EQUS    " TAB below words.",$EA
 .L9BBD      RTS
-.L9BBE      LDA     #$08
+
+.exec_tab   LDA     #$08
             BIT     options
             BNE     L9BD6
 .L9BC4      INC     L0036
@@ -1843,7 +1849,7 @@ OSCLI       =       $FFF7
             STA     L0500,Y
             LDA     #$06
             STA     L0034
-            JSR     LB341
+            JSR     ctl_up
             LDA     L0013
             DEC     A
             CMP     OSHWM+1
@@ -3709,7 +3715,7 @@ OSCLI       =       $FFF7
             EQUS    $11,$87,$11,$00,$EA
 .LB20B      RTS
 
-.LB20C      JSR     L97CB
+.curs_left  JSR     L97CB
             BCC     LB215
             LDA     L0036
             BEQ     LB250
@@ -3717,7 +3723,7 @@ OSCLI       =       $FFF7
             BPL     LB250
             LDA     L002F
             STA     L0036
-.LB21D      JSR     L97CB
+.curs_up    JSR     L97CB
             BCS     LB250
             LDA     #$01
             JSR     L9A61
@@ -3738,13 +3744,15 @@ OSCLI       =       $FFF7
             LDA     #$04
             STA     L0034
             RTS
-.LB248      STZ     L0036
+
+.ctl_left   STZ     L0036
             BRA     LB250
-.LB24C      LDA     L0040
+.ctl_right  LDA     L0040
             STA     L0036
 .LB250      STZ     L0034
             RTS
-.LB253      LDA     L0036
+
+.curs_right LDA     L0036
             CMP     L002F
             BEQ     LB25D
             INC     L0036
@@ -3753,7 +3761,7 @@ OSCLI       =       $FFF7
             BCS     LB250
             LDA     #$00
             STZ     L0036
-.LB266      JSR     L97D4
+.curs_down  JSR     L97D4
             BCS     LB250
             LDA     #$01
             JSR     L9AC0
@@ -3781,18 +3789,19 @@ OSCLI       =       $FFF7
             LDA     (L0012),Y
             CMP     #$0D
             BNE     LB2AC
-            JSR     LB266
+            JSR     curs_down
             BCS     LB2A9
             JSR     LAFFD
-            JMP     LB248
+            JMP     ctl_left
 .LB2A9      PLA
             PLA
             RTS
-.LB2AC      JSR     LB253
+.LB2AC      JSR     curs_right
             JSR     LAFFD
             STZ     L0034
             RTS
-.LB2B5      LDA     L0040
+
+.shift_rght LDA     L0040
             CMP     L0036
             BCS     LB2C2
             STA     L0036
@@ -3811,12 +3820,13 @@ OSCLI       =       $FFF7
 .LB2D9      RTS
 .LB2DA      LDA     L0036
             BNE     LB2E9
-            JSR     LB21D
+            JSR     curs_up
             BCS     LB2A9
             JSR     LAFFD
-            JMP     LB24C
-.LB2E9      JMP     LB20C
-.LB2EC      LDA     L0040
+            JMP     ctl_right
+.LB2E9      JMP     curs_left
+
+.shift_left LDA     L0040
             CMP     L0036
             BCS     LB2F5
             STA     L0036
@@ -3832,7 +3842,7 @@ OSCLI       =       $FFF7
             BCC     LB30F
             JSR     LB2DA
             BRA     LB301
-.LB30F      JMP     LB253
+.LB30F      JMP     curs_right
 .LB312      CMP     #$30
             BCC     LB323
             CMP     #$3A
@@ -3858,12 +3868,13 @@ OSCLI       =       $FFF7
             LDA     #$0D
             STA     (OSHWM)
             STA     (L0004)
-.LB341      LDX     L0022
+.ctl_up     LDX     L0022
             LDY     L0023
             JSR     L9A68
             STZ     L0036
             RTS
-.LB34B      LDA     L0051
+
+.ctl_down   LDA     L0051
             STA     L0037
             LDX     L0004
             LDY     L0005
@@ -3914,10 +3925,12 @@ OSCLI       =       $FFF7
             LDA     #$04
             STA     L0050
             RTS
-.LB3AF      LDA     L0037
+
+.exec_cf6   LDA     L0037
             STA     L0050
             BRA     LB3C1
-.LB3B5      LDA     L0037
+
+.exec_cf7   LDA     L0037
             STA     L0051
             BRA     LB3C1
 
@@ -4062,10 +4075,12 @@ OSCLI       =       $FFF7
             JSR     OSWRCH
 .LB563      JSR     L978C
             JMP     L8534
-.LB569      LDA     #$01
+
+.shift_copy LDA     #$01
             STA     L0039
             JSR     L97B7
             JMP     L98E3
+
 .LB573      BRK
             EQUB    $01
             EQUS    "Only 0,1,3,4,6,7,D and K"
@@ -4167,7 +4182,7 @@ OSCLI       =       $FFF7
             TAY
             STZ     L04FF
             JMP     L8531
-.LB654      JSR     LB341
+.LB654      JSR     ctl_up
 .LB657      BRK
             EQUB    $02
             EQUS    "No room"
@@ -4258,7 +4273,7 @@ OSCLI       =       $FFF7
             SBC     #$00
             STA     L004C
             BCC     LB703
-            JSR     LB341
+            JSR     ctl_up
             LDA     L0012
             STA     L000E
             LDA     L0013
@@ -5047,7 +5062,7 @@ OSCLI       =       $FFF7
             RTS
 .LBE65      JSR     LBE34
             BNE     LBE71
-            JSR     LB341
+            JSR     ctl_up
             LDX     L0004
             LDY     L0005
 .LBE71      STX     L0064
