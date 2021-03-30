@@ -1,5 +1,5 @@
 load $8000 edit110.rom
-save edit110.asm
+save edittmp.asm
 symbols bbc.sym
 symbols edit110.sym
 cpu 65c02
@@ -168,3 +168,29 @@ byte $aefd 13
 byte $bdac 5
 byte $bdb1 5
 stringz $bfeb
+#stringterm $8750 $EA
+word $874F 28
+stringterm $8787 $EA
+stringterm $8BE9 $EA
+stringterm $89B8 $EA
+stringterm $8C5B $EA
+stringterm $8CE2 $EA
+stringterm $8D7B $EA
+stringterm $8E1F $EA
+stringterm $8EBA $EA
+stringterm $8F55 $EA
+stringterm $8FF0 $EA
+stringterm $9094 $EA
+stringterm $9163 $EA
+stringterm $91C9 $EA
+stringterm $92A3 $EA
+stringterm $9328 $EA
+stringterm $93B0 $EA
+stringterm $93D7 $EA
+stringterm $9443 $EA
+stringterm $94B3 $EA
+stringterm $9517 $EA
+stringterm $9576 $EA
+stringterm $95E0 $EA
+stringterm $9650 $EA
+stringterm $96F1 $EA
