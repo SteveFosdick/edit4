@@ -7,7 +7,7 @@ OSHWM   EQU &0002
 HIMEM   EQU &0004
 
 flags   EQU &002B
-crFlags EQU %0010000
+crFlag  EQU %0010000
 insOver EQU %0001000
 
 markCnt EQU &004F
