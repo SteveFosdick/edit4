@@ -281,7 +281,7 @@ j8057
  BEQ j80D4
  BCC j8063
  JSR jAC88
- JSR jB227
+ JSR key_ctrl_up
 
 j8063
 
@@ -699,7 +699,7 @@ j83F0
  CMP #&02
  BNE j83FC
  JSR jAC88
- JSR jB227
+ JSR key_ctrl_up
 j83FC
  LDA #&00
  STA j39
@@ -890,7 +890,7 @@ j84FF
  LDA #&0D
  STA (OSHWM),Y
  STA (HIMEM),Y
- JMP jB227
+ JMP key_ctrl_up
 
 j851C
  JSR jB24B
@@ -908,7 +908,7 @@ j8526
  LDA #&05
  STA j34
 
-j8533
+main_loop
  JSR jAEC2
  JSR j991B
  JSR cursorOn
@@ -982,7 +982,7 @@ notDescriptiveMode
  ASL A
  TAX
  JSR j85B4
- JMP j8533
+ JMP main_loop
 
 j85B4
  LDA keyTable,X
@@ -993,7 +993,7 @@ j85B4
 
 j85C1
  JSR j85C7
- JMP j8533
+ JMP main_loop
 j85C7
  CMP #&7F
  BEQ j8632
@@ -1007,7 +1007,7 @@ j85C7
  BCS j85E5
  LDY #&00
  STY j36
- JMP jB152
+ JMP key_down
 j85E5
  LDA #&0D
 j85E7
@@ -1040,11 +1040,11 @@ j85FF
 j8616
  CMP #&0D
  BEQ j8620
- JSR jB13F
+ JSR key_right
  JMP j8626
 j8620
- JSR jB130
- JSR jB152
+ JSR key_ctrl_left
+ JSR key_down
 j8626
  LDA j34
  BEQ j862D
@@ -1057,14 +1057,14 @@ j8631
 j8632
  JSR j9ABC
  BEQ j863A
- JMP jB0F4
+ JMP key_left
 j863A
  LDA j36
  BNE j8643
  JSR j9753
  BCS j8631
 j8643
- JSR jB0F4
+ JSR key_left
  JSR j976B
  CMP j36
  BCS j864F
@@ -1081,7 +1081,7 @@ j864F
  LDA #&01
  STA j34
  RTS
-j8665
+key_copy
  JSR j975C
  BCC j8670
  LDA j36
@@ -1133,55 +1133,55 @@ j86A2
 j86B4
  JMP j8626
 
-keyTable        ; &86B7
- DW jB5AE
- DW jB3D3
- DW jB2F2
- DW jB317
- DW jBB03
- DW jBC10
- DW jBDD7
- DW jBE0A
- DW jA339
- DW jB4FA
- DW j9B56
- DW j8665
- DW jB0F4
- DW jB13F
- DW jB152
- DW jB105
- DW toggleCRs
- DW jB241
- DW jB39D
- DW jB2A3
- DW j8533
- DW jB489
- DW jBDF0
- DW jBE59
- DW jBDF6
- DW jB2B0
- DW j9B15
- DW jB456
- DW jB1F0
- DW jB1B8
- DW jB21F
- DW jB217
- DW j8533
- DW j8533
- DW j8533
- DW j8533
- DW j8533
- DW j8533
- DW jB297
- DW jB29D
- DW j8533
- DW j8533
- DW j8533
- DW j8533
- DW jB130
- DW jB136
- DW jB233
- DW jB227
+keyTable                ; &86B7
+ DW key_f0              ; f0
+ DW key_f1              ; f1
+ DW key_f2              ; f2
+ DW key_f3              ; f3
+ DW key_f4              ; f4
+ DW key_f5              ; f5
+ DW key_f6              ; f6
+ DW key_f7              ; f7
+ DW key_f8              ; f8
+ DW key_f9              ; f9
+ DW key_tab             ; tab
+ DW key_copy            ; copy
+ DW key_left            ; left
+ DW key_right           ; right
+ DW key_down            ; down
+ DW key_up              ; up
+ DW toggleCRs           ; shift-f0
+ DW key_shift_f1        ; shift-f1
+ DW key_shift_f2        ; shift-f2
+ DW key_shift_f3        ; shift-f3
+ DW main_loop           ; shift-f4
+ DW key_shift_f5        ; shift-f5
+ DW key_shift_f6        ; shift-f6
+ DW key_shift_f7        ; shift-f7
+ DW key_shift_f8        ; shift-f8
+ DW key_shift_f9        ; shift-f9
+ DW key_shift_tab       ; shift-tab
+ DW key_shift_copy      ; shift-copy
+ DW key_shift_left      ; shift-left
+ DW key_shift_right     ; shift-right
+ DW key_shift_down      ; shift-down
+ DW key_sup             ; shift-up
+ DW main_loop           ; ctrl-f0
+ DW main_loop           ; ctrl-f1
+ DW main_loop           ; ctrl-f2
+ DW main_loop           ; ctrl-f3
+ DW main_loop           ; ctrl-f4
+ DW main_loop           ; ctrl-f5
+ DW key_ctrl_f6         ; ctrl-f6
+ DW key_ctrl_f7         ; ctrl-f7
+ DW main_loop           ; ctrl-f8
+ DW main_loop           ; ctrl-f9
+ DW main_loop           ; ctrl-tab
+ DW main_loop           ; ctrl-copy
+ DW key_ctrl_left       ; ctrl-left
+ DW key_ctrl_right      ; ctrl-right
+ DW key_ctrl_down       ; ctrl-down
+ DW key_ctrl_up         ; ctrl-up
 
 extHelpTable
  DW helpF0
@@ -1936,7 +1936,7 @@ j9AF4
  JMP j9AF4
 j9B14
  RTS
-j9B15
+key_shift_tab
  LDA #&00
  STA j34
  LDA #&08
@@ -1959,7 +1959,7 @@ j9B3E
  DATA " TAB below words."
  NOP
  RTS
-j9B56
+key_tab
  LDA #&08
  BIT flags
  BNE j9B70
@@ -2078,7 +2078,7 @@ jA311
  JMP j8526
 jA336
  JMP jA2FC
-jA339
+key_f8
  JSR jBD51
  LDX #&FF
  STX j29
@@ -4119,7 +4119,7 @@ jB0EB
  ORA (pointer),Y
  NOP
  RTS
-jB0F4
+key_left
  JSR j9753
  BCC jB0FD
  LDA j36
@@ -4129,7 +4129,7 @@ jB0FD
  BPL jB13A
  LDA j2F
  STA j36
-jB105
+key_up
  JSR j9753
  BCS jB13A
  LDA #&01
@@ -4153,18 +4153,18 @@ jB119
  LDA #&03
  STA j34
  RTS
-jB130
+key_ctrl_left
  LDA #&00
  STA j36
  BEQ jB13A
-jB136
+key_ctrl_right
  LDA j40
  STA j36
 jB13A
  LDA #&00
  STA j34
  RTS
-jB13F
+key_right
  LDA j36
  CMP j2F
  BEQ jB149
@@ -4175,7 +4175,7 @@ jB149
  BCS jB13A
  LDA #&00
  STA j36
-jB152
+key_down
  JSR j975C
  BCS jB13A
  LDA #&01
@@ -4222,21 +4222,21 @@ jB197
  LDA (j12),Y
  CMP #&0D
  BNE jB1AD
- JSR jB152
+ JSR key_down
  BCS jB1AA
  JSR jAEC2
- JMP jB130
+ JMP key_ctrl_left
 jB1AA
  PLA
  PLA
  RTS
 jB1AD
- JSR jB13F
+ JSR key_right
  JSR jAEC2
  LDA #&00
  STA j34
  RTS
-jB1B8
+key_shift_right
  LDA j40
  CMP j36
  BCS jB1C5
@@ -4261,13 +4261,13 @@ jB1DD
 jB1DE
  LDA j36
  BNE jB1ED
- JSR jB105
+ JSR key_up
  BCS jB1AA
  JSR jAEC2
- JMP jB136
+ JMP key_ctrl_right
 jB1ED
- JMP jB0F4
-jB1F0
+ JMP key_left
+key_shift_left
  LDA j40
  CMP j36
  BCS jB1F9
@@ -4287,32 +4287,32 @@ jB205
  JSR jB1DE
  JMP jB205
 jB214
- JMP jB13F
-jB217
+ JMP key_right
+key_sup
  LDA j30
  CLC
  ADC #&01
  JMP j99F2
-jB21F
+key_shift_down
  LDA j30
  CLC
  ADC #&01
  JMP j9A4E
-jB227
+key_ctrl_up
  LDX j22
  LDY j23
  JSR j99F9
  LDA #&00
  STA j36
  RTS
-jB233
+key_ctrl_down
  LDA j51
  STA j37
  LDX HIMEM
  LDY HIMEM+1
  JSR j9A55
  JMP jBE02
-jB241
+key_shift_f1
  LDA flags
  EOR #&10
  JSR storeFlags
@@ -4355,15 +4355,15 @@ jB24B
  LDA #&04
  STA j50
  RTS
-jB297
+key_ctrl_f6
  LDA j37
  STA j50
  BPL jB2AB
-jB29D
+key_ctrl_f7
  LDA j37
  STA j51
  BPL jB2AB
-jB2A3
+key_shift_f3
  LDA #&00
  STA j50
  LDA j30
@@ -4373,7 +4373,7 @@ jB2AB
  LDA #&00
  STA j34
  RTS
-jB2B0
+key_shift_f9
  JSR j98E7
  DATA "Text will be cleared if a key is hit"
  NOP
@@ -4390,7 +4390,7 @@ jB2B0
 jB2EC
  JSR j848C
  JMP j851F
-jB2F2
+key_f2
  JSR j98E7
  DATA "Type filename to load:"
  NOP
@@ -4398,7 +4398,7 @@ jB2F2
  LDY #&00
  JSR j82F0
  JMP j8523
-jB317
+key_f3
  JSR jBD83
  CMP #&01
  BEQ jB340
@@ -4440,7 +4440,7 @@ jB384
  DATA 1,"Bad use of stored name"
  BRK
 
-jB39D
+key_shift_f2
  JSR jBD51
  JSR j9A86
  JSR j98D1
@@ -4461,7 +4461,7 @@ jB39D
  LDY j09
  JSR j99F9
  JMP j9933
-jB3D3
+key_f1
  LDA #&01
  STA j24
  JSR j973F
@@ -4517,7 +4517,7 @@ jB41B
 jB450
  JSR j9714
  JMP j8526
-jB456
+key_shift_copy
  LDA #&01
  STA j39
  JSR j973F
@@ -4531,7 +4531,7 @@ jB47A
 jB481
  DATA 0,1,0,3,4,0,6,7
 
-jB489
+key_shift_f5
  JSR j98E7
  DATA "New Mode:"
  NOP
@@ -4591,7 +4591,7 @@ jB4E9
  ORA flags
  JSR storeFlags
  JSR jB24B
-jB4FA
+key_f9
  LDA j04FF
  CMP OSHWM+1
  BCC jB556
@@ -4634,7 +4634,7 @@ jB4FA
  STA j04FF
  JMP j8523
 jB54A
- JSR jB227
+ JSR key_ctrl_up
  BRK
  DATA 2,"No room"
 jB556
@@ -4687,7 +4687,7 @@ jB5A7
  BNE jB572
 jB5AD
  RTS
-jB5AE
+key_f0
  LDA #&01
  STA j4B
  LDY #&00
@@ -4740,7 +4740,7 @@ jB61A
  SBC #&00
  STA j4C
  BCC jB5FD
- JSR jB227
+ JSR key_ctrl_up
  LDA j12
  STA j0E
  LDA j13
@@ -5383,7 +5383,7 @@ jBAFC
  LDX j14
  LDY j15
  JMP j9A55
-jBB03
+key_f4
  JSR j98E7
  DATA "Find and replace:"
  NOP
@@ -5480,7 +5480,7 @@ jBBFB
  DATA 1,"No previous string"
  BRK
 
-jBC10
+key_f5
  JSR jBD83
  JSR j98E7
  DATA "Global replace:"
@@ -5685,7 +5685,7 @@ jBD83
 jBD94
  JSR jBD63
  BNE jBDA0
- JSR jB227
+ JSR key_ctrl_up
  LDX HIMEM
  LDY HIMEM+1
 jBDA0
@@ -5718,7 +5718,7 @@ jBDC9
  DATA 1,"Bad marking"
  BRK
 
-jBDD7
+key_f6
  JSR j9A86
  LDX markCnt
  CPX #&02
@@ -5730,10 +5730,10 @@ jBDD7
  JSR j9933
  INC markCnt
  JMP j9878
-jBDF0
+key_shift_f6
  JSR jBD1A
  JMP j9933
-jBDF6
+key_shift_f8
  JSR jBD1A
  JSR jBD63
  BEQ jBDC9
@@ -5744,7 +5744,7 @@ jBE02
  LDA pointer
  STA j36
  RTS
-jBE0A
+key_f7
  JSR jBDA5
  SEC
  LDA j1D
@@ -5785,7 +5785,7 @@ jBE39
  STX markCnt
  JSR j9878
  JMP j9933
-jBE59
+key_shift_f7
  JSR jBDA5
  LDX j1C
  LDY j1E
