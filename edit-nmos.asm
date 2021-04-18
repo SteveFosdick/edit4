@@ -7,8 +7,9 @@ OSHWM   EQU &0002
 HIMEM   EQU &0004
 
 flags   EQU &002B
-crFlag  EQU %0010000
-insOver EQU %0001000
+crFlag  EQU %00100000
+insOver EQU %00010000
+tabMode EQU %00001000
 
 markCnt EQU &004F
 
@@ -1939,11 +1940,11 @@ j9B14
 key_shift_tab
  LDA #&00
  STA j34
- LDA #&08
+ LDA #tabMode
  EOR flags
  JSR storeFlags
 
- LDA #&08
+ LDA #tabMode
  AND flags
  BNE j9B3E
 
@@ -1960,7 +1961,7 @@ j9B3E
  NOP
  RTS
 key_tab
- LDA #&08
+ LDA #tabMode
  BIT flags
  BNE j9B70
 j9B5C
@@ -4052,7 +4053,7 @@ jB05F
  TAX
  TYA
  CLC
-                                                                                                                                                                                                                                                                                                                                                                                                                                         ADC jB47A,X
+ ADC jB47A,X
  PHA
  JSR OSWRCH
  LDA j0732,Y
@@ -4082,7 +4083,7 @@ jB0A5
 jB0B1
  CMP #&0D
  BNE jB0C0
- LDA #&20
+ LDA #crFlag
  BIT flags
  BNE jB0BE
 jB0BB
@@ -4314,7 +4315,7 @@ key_ctrl_down
  JMP jBE02
 key_shift_f1
  LDA flags
- EOR #&10
+ EOR #insOver
  JSR storeFlags
  JMP j9874
 jB24B
