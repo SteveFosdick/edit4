@@ -5541,7 +5541,7 @@ jBC7F
  JSR j98EF
  DFB ' '
  NOP
- LDA (jBC,X)
+ JSR jBCA1
  JSR j98EF
  DATA " found"
  NOP
