@@ -3877,7 +3877,8 @@ jAF36
  BNE jAF68
 jAF4D
  JSR vstrng
- ASL jEA0B,X
+ DFB &1E,&0B
+ NOP
  LDY j30
 jAF55
  LDA j0732,Y
@@ -4116,8 +4117,7 @@ jB0D7
  JMP OSWRCH
 jB0EB
  JSR vstrng
- ORA (j87),Y
- ORA (pointer),Y
+ DFB &11,&87,&11,&00
  NOP
  RTS
 key_left
