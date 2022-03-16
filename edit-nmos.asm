@@ -1,6 +1,235 @@
-; > S.Source
+	TTL     EDIT Text Editor
 
-nop     EQU     &00EA
+; This is a BBC Micro version of the Acorn EDIT text editor which
+; appeared in various versions as the editor for the the ISO Pascal
+; system, as part of Acorn's 6502 development system and on the Master
+; as the built-in editor.
+;
+; The source code in this file comes from a disassembly done at
+; SJ Research research with names and comments copied from original
+; Acorn source for a later, CMOS 6502 version intended for the
+; 2nd processor/Master.
+;
+; The assembler syntax is ADE/ADE+/Lancaster.
+
+; Declarations, mostly characters.
+
+nop	EQU     &EA
+lf	EQU	&0A
+cr	EQU	&0D
+tab	EQU	&09
+down	EQU	lf
+up	EQU	&0B
+home	EQU	&1E
+space	EQU	' '
+delete	EQU	&7F
+
+	IF	lfver
+termin	EQU	lf
+	ELSE
+termin	EQU	cr
+	FI
+
+; Symbolic names for the bits of a byte.
+
+bit7    EQU     &80
+bit6    EQU     &40
+bit5    EQU     &20
+bit4    EQU     &10
+bit3    EQU     &08
+bit2    EQU     &04
+bit1    EQU     &02
+bit0    EQU     &01
+
+blink   EQU     bit6
+fblink  EQU     bit5
+
+; Different styles of cursor.
+
+fcstrt  EQU     &00             ; Full cursor start line
+ncstrt  EQU     &07             ; Normal start line
+
+; Zero page workspace.  Some locations are used for more than one
+; thing by different parts of the editor.
+
+	DSECT
+	ORG	&01
+csrtoc	DS	1
+csronw	DS	1
+hardup	DS	1
+harddo	DS	1
+fullsc	DS	1
+thelot	DS	1
+	DEND
+
+	DSECT
+	ORG	&80
+multsy	DS	1
+notsym	DS	1
+wildsy	DS	1
+alphas	DS	1
+digsym	DS	1
+subsy	DS	1
+setsym	DS	1
+field	DS	1
+founds	DS	1
+escsym	DS	1
+nsensy	DS	1
+buttsy	DS	1
+termsy	DS	1
+	DEND
+
+	DSECT
+	ORG	&00
+string	DS	2
+paje	DS	2
+tmax	DS	2
+temp	DS	2
+addr	DS	2
+argp	DS	2
+varp	DS	2
+TP	DS	2
+GS	DS	2
+GE	DS	2
+MS	DS	2
+xeff	EQU	MS
+lastsp	EQU	MS+1
+me	DS	2
+diff	EQU	me
+centre	EQU	me+1
+smatlo	DS	2
+rflush	EQU	smatlo
+linfed	EQU	smatlo+1
+smathi	DS	2
+len	EQU	smathi
+indent	EQU	smathi+1
+umatlo	DS	2
+underl	EQU	umatlo
+pundrl	EQU	umatlo+1
+umathi	DS	2
+bold	EQU	umathi
+vspace	EQU	umathi+1
+
+        IF	cf8key
+clterm  DS      1  		; current line terminator
+        FI
+        IF      extgf		; Extended search/replace characters
+ctptr   DS	2		; current text pointer
+        FI
+
+hymem	DS	2
+tstart	DS	2
+brkact	DS	1
+size	DS	2
+maxsiz	DS	2
+pwtflg	DS	1
+prtflg	DS	1
+tutmod	DS	1
+atemp	DS	1
+count	DS	1
+index	DS	1
+pagewi	DS	1
+pagele	DS	1
+realPA	DS	1
+scrupY	DS	1
+maxscr	DS	1
+update	DS	1
+scrnPY	DS	1
+scrnX	DS	1
+scrnY	DS	1
+lnbufx	DS	1
+cursed	DS	1
+sstckx	DS	1
+fill	EQU	sstckx
+replin	DS	1
+tinden	EQU	replin
+chunks	DS	2
+juslen	EQU	chunks
+spaces	EQU	chunks+1
+nummar	DS	1
+L	EQU	nummar
+marksb	DS	1
+Q	EQU	marksb
+currle	DS	1
+nextre	DS	1
+nxtchr	DS	1
+lineDW	DS	1
+fieldI	DS	1
+lineot	EQU	fieldI
+inpind	DS	1
+ctlcha	EQU	inpind
+outind	DS	1
+boldrq	EQU	outind
+MMX	DS	1
+undrrq	EQU	mmx
+offset	DS	1		; page offset.
+simpch	DS	1
+pbold	EQU	simpch
+nextX	DS	1
+lastta	EQU	nextx
+line	DS	2
+doindX	EQU	line
+indexH	DS	1
+mulffl	DS	1
+tabcha	EQU	mulffl
+markX	DS	1
+TSM	DS	1
+BSM	DS	1
+scratc	DS	&12
+buff	EQU	scratc+10	; (no.bffr len 15 {MMMDCCCLXXXVIII})
+texpfl	EQU	buff
+sensfl	EQU	buff+1
+buttfl	EQU	buff+2
+metafl	EQU	buff+3
+replfl	EQU	buff+4
+endp	EQU	buff+8
+scp	EQU	buff+10
+texp	EQU	buff+12
+mousel	EQU	buff+15
+
+	IF	stamp
+flexec	DS	4
+flload	DS	4
+	FI
+	DEND
+
+	DSECT
+	ORG	&0400
+frbuff  DS      &64
+grbuff  DS      &64
+nambuf  DS      &34
+oldsta  DS      &04             ; start and end of incore text
+linbuf  DS      &0100
+comman  EQU     linbuf
+noregs  EQU     comman          ; 10 number registers
+page    EQU     noregs          ; the page number is in 0
+lineno  EQU     page + 2        ; the line number is in 1
+pageeh  EQU     noregs + 10 * 2
+pageoh  EQU     pageeh + 2
+pageef  EQU     pageoh + 2
+pageof  EQU     pageef + 2      ; the header and footer pointers
+tablst  EQU     pageof + 2      ; list of tab positions, length 20
+maclst  EQU     tablst + 20     ; list of posible macro positions
+stracc  DS      &0100
+maxmac  EQU     stracc - maclst ; Number of macro posns *2
+
+trnlst  EQU     stracc          ; table of translateable characters
+
+	IF	cf8key
+dhsize	EQU	6		; Default header text size.
+	DS	dhsize
+dfsize	EQU	20		; Default footer text size.
+	DS	dfsize
+	FI
+
+sindex  DS      &06
+ssttlo  DS      &06
+sstthi  DS      &06
+scntlo  DS      &06
+scnthi  DS      &06
+fieldm  DS      &0A
+fieldo  DS      &0A
+scrim   DS      &20
 
 pointer EQU     &0000
 OSHWM   EQU     &0002
@@ -209,8 +438,6 @@ j0728   EQU     &0728
 j0732   EQU     &0732
 j0733   EQU     &0733
 jEA0B   EQU     &EA0B
-
-brkv    EQU     &0202
 
         ORG     &8000
 
