@@ -49,8 +49,8 @@ fblink  EQU     bit5
 fcstrt  EQU     &00             ; Full cursor start line
 ncstrt  EQU     &07             ; Normal start line
 
-; Zero page workspace.  Some locations are used for more than one
-; thing by different parts of the editor.
+; Constants controlling the refresh of the screen.  Though this uses
+; DSECT and the DS directive, this is actually an enumeration.
 
 	DSECT
 	ORG	&01
@@ -61,6 +61,9 @@ harddo	DS	1
 fullsc	DS	1
 thelot	DS	1
 	DEND
+
+; Zero page workspace.  Some locations are used for more than one
+; thing by different parts of the editor.
 
 	DSECT
 	ORG	&80
@@ -230,12 +233,8 @@ scnthi  DS      &06
 fieldm  DS      &0A
 fieldo  DS      &0A
 scrim   DS      &20
+	DEND
 
-pointer EQU     &0000
-OSHWM   EQU     &0002
-HIMEM   EQU     &0004
-
-flags   EQU     &002B
 crFlag  EQU     %00100000
 insOver EQU     %00010000
 tabMode EQU     %00001000
@@ -244,20 +243,6 @@ markCnt EQU     &004F
 
 brkZP   EQU     &00FD
 
-j06     EQU     &0006
-j07     EQU     &0007
-j08     EQU     &0008
-j09     EQU     &0009
-j0A     EQU     &000A
-j0B     EQU     &000B
-j0C     EQU     &000C
-j0D     EQU     &000D
-j0E     EQU     &000E
-j0F     EQU     &000F
-j10     EQU     &0010
-j11     EQU     &0011
-j12     EQU     &0012
-j13     EQU     &0013
 j14     EQU     &0014
 j15     EQU     &0015
 j16     EQU     &0016
@@ -270,54 +255,22 @@ j1C     EQU     &001C
 j1D     EQU     &001D
 j1E     EQU     &001E
 j1F     EQU     &001F
-j20     EQU     &0020
-j21     EQU     &0021
-j22     EQU     &0022
-j23     EQU     &0023
-j24     EQU     &0024
-j25     EQU     &0025
-j26     EQU     &0026
-j27     EQU     &0027
-j28     EQU     &0028
-j29     EQU     &0029
-j2A     EQU     &002A
-j2C     EQU     &002C
-j2D     EQU     &002D
-j2E     EQU     &002E
-j2F     EQU     &002F
-j30     EQU     &0030
-j31     EQU     &0031
-j32     EQU     &0032
-j33     EQU     &0033
-j34     EQU     &0034
-j35     EQU     &0035
-j36     EQU     &0036
-j37     EQU     &0037
-j38     EQU     &0038
-j39     EQU     &0039
 j3A     EQU     &003A
 j3B     EQU     &003B
 j3C     EQU     &003C
 j3D     EQU     &003D
 j3E     EQU     &003E
 j3F     EQU     &003F
-j40     EQU     &0040
-j41     EQU     &0041
-j42     EQU     &0042
-j43     EQU     &0043
 j44     EQU     &0044
 j45     EQU     &0045
 j46     EQU     &0046
 j47     EQU     &0047
-j48     EQU     &0048
 j49     EQU     &0049
 j4A     EQU     &004A
 j4B     EQU     &004B
 j4C     EQU     &004C
-j4D     EQU     &004D
 j4E     EQU     &004E
-j50     EQU     &0050
-j51     EQU     &0051
+
 j52     EQU     &0052
 j53     EQU     &0053
 j54     EQU     &0054
@@ -442,10 +395,6 @@ jEA0B   EQU     &EA0B
         ORG     &8000
 
 ; ==============================================================================
-; =
-; ==============================================================================
-
-; ==============================================================================
 ; = Start of Edit! (Rom header)
 ; ==============================================================================
 
@@ -470,34 +419,34 @@ brk     LDX     #&FF
         TXS                     ;  reset the stack pointer
 
         LDY     #&00
-        STY     j39
+        STY     cursed
 
         LDA     #&7E
         JSR     OSBYTE          ;  Acknowledge the ESCAPE condition
 
-        LDA     j24
+        LDA     brkact
         CMP     #&FF
         BNE     j8057
 
-j8033   LDA     j08
+j8033   LDA     addr
         BNE     j8039
-        DEC     j09
+        DEC     addr+1
 
-j8039   DEC     j08
-        LDA     j0A
+j8039   DEC     addr
+        LDA     argp
         BNE     j8041
-        DEC     j0B
+        DEC     argp+1
 
-j8041   DEC     j0A
-        LDA     (j0A),Y
-        STA     (j08),Y
-        LDA     j08
+j8041   DEC     argp
+        LDA     (argp),Y
+        STA     (addr),Y
+        LDA     addr
         BNE     j8033
-        LDA     j09
-        CMP     pointer+1
+        LDA     addr+1
+        CMP     string+1
         BNE     j8033
         LDA     #&0D
-        STA     (HIMEM),Y
+        STA     (tmax),Y
         LDA     #&00
 
 j8057   CMP     #&01
@@ -513,7 +462,7 @@ j8063   JSR     vstrng
         JSR     j9921
         JSR     brkPrint
         JSR     cursorOff
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         CMP     #&05
         BEQ     j80A6
@@ -620,18 +569,18 @@ language
         LDA     #<brk
         STA     brkv+1
         LDX     #&FF
-        STX     j39
+        STX     cursed
         LDY     #&00
-        STY     j4D
+        STY     indexH
         LDA     #&0D
         STA     j04C8
-        CMP     (OSHWM),Y
+        CMP     (paje),Y
         BNE     j8166
-        CMP     (HIMEM),Y
+        CMP     (tmax),Y
         BNE     j8166
         JSR     j848C
 j8166   LDY     #&10
-        STY     flags
+        STY     tutmod
         LDA     #&0D
         STA     j0400
         STA     j0464
@@ -666,20 +615,20 @@ j8248   LDX     #&52
         RTS
 
 j824D   SEC
-        SBC     j08
-        STA     j27
+        SBC     addr
+        STA     maxsiz
         TXA
-        SBC     j09
-        STA     j28
+        SBC     addr+1
+        STA     maxsiz+1
 
-j8257   LDA     (j06),Y
+j8257   LDA     (temp),Y
         CMP     #&0D
         BEQ     j827E
         CMP     #&8B
         BEQ     j826E
         LDX     #&00
 
-j8263   LDA     (j06),Y
+j8263   LDA     (temp),Y
         STA     j04C8,X
         INY
         INX
@@ -695,18 +644,18 @@ j826E   LDA     j04C8
         STA     j53
         RTS
 
-j827E   LDX     j12
-        LDY     j13
+j827E   LDX     GE
+        LDY     GE+1
         TXA
         PHA
         TYA
         PHA
-        LDX     j22
-        LDY     j23
+        LDX     tstart
+        LDY     tstart+1
         JSR     j99F9
         LDY     #&00
 
-j828F   LDA     (j12),Y
+j828F   LDA     (GE),Y
         STA     j0600,Y
         INY
         BNE     j828F
@@ -753,12 +702,12 @@ j82E0   LDA     (j52),Y
         INY
         JMP     j82E0
 j82ED   JMP     jB0D7
-j82F0   LDA     j22
-        STA     j08
-        LDA     j23
-        STA     j09
-        LDA     HIMEM
-        LDX     HIMEM+1
+j82F0   LDA     tstart
+        STA     addr
+        LDA     tstart+1
+        STA     addr+1
+        LDA     tmax
+        LDX     tmax+1
 j82FC   JSR     j824D
         JSR     j98E7
         DATA    "Loading "
@@ -774,14 +723,14 @@ j830E   JSR     isItDFS
         LDA     j5E
         ORA     j5F
         BNE     j8358
-        LDA     j27
+        LDA     maxsiz
         CMP     j5C
-        LDA     j28
+        LDA     maxsiz+1
         SBC     j5D
         BCC     j8358
-j832F   LDA     j08
+j832F   LDA     addr
         STA     j54
-        LDA     j09
+        LDA     addr+1
         STA     j55
         LDA     #&00
         STA     j56
@@ -793,10 +742,10 @@ j832F   LDA     j08
         LDA     #&00
         STA     j04FF
         CLC
-        LDA     j08
+        LDA     addr
         ADC     j5C
         TAX
-        LDA     j09
+        LDA     addr+1
         ADC     j5D
         TAY
         RTS
@@ -821,9 +770,9 @@ j837F   STA     j54,X
         DEC     j59
         DEC     j5A
         DEC     j5B
-        LDA     j12
+        LDA     GE
         STA     j5C
-        LDA     j13
+        LDA     GE+1
         STA     j5D
         LDA     j64
         STA     j60
@@ -850,10 +799,10 @@ j83BB   INY
         CLC
 j83C4   TYA
         ADC     #&00
-        STA     j06
+        STA     temp
         LDA     #&00
         ADC     #&05
-        STA     j07
+        STA     temp+1
         LDA     j0500,Y
         LDY     #&00
         CMP     #&0D
@@ -862,8 +811,8 @@ j83D7   LDY     #&00
         BEQ     j83C4
 j83DB   LDA     #&20
         JSR     OSWRCH
-        LDA     #&05
-        STA     j34
+        LDA     #fullsc
+        STA     update
         JSR     inputLine
         BCC     j83D6
 
@@ -871,13 +820,13 @@ j83E9   JSR     vstrng
         DATA    3,15,13
         NOP
 
-j83F0   LDA     j24
+j83F0   LDA     brkact
         CMP     #&02
         BNE     j83FC
         JSR     jAC88
         JSR     key_ctrl_up
 j83FC   LDA     #&00
-        STA     j39
+        STA     cursed
 j8400   JMP     j80C9
 
 j8403   BIT     jFF
@@ -933,152 +882,152 @@ isItDFS LDY     #&00
         CMP     #&04
         RTS
 
-j8450   STX     j25
-        STY     j26
-        LDA     j25
-        ORA     j26
+j8450   STX     size
+        STY     size+1
+        LDA     size
+        ORA     size+1
         BEQ     j848B
-        LDX     j26
+        LDX     size+1
         SEC
         LDA     #&00
-        SBC     j25
+        SBC     size
         TAY
         BEQ     j847D
-        STA     j06
+        STA     temp
         SEC
-        LDA     j0A
-        SBC     j06
-        STA     j0A
+        LDA     argp
+        SBC     temp
+        STA     argp
         BCS     j8472
-        DEC     j0B
+        DEC     argp+1
         SEC
-j8472   LDA     j0C
-        SBC     j06
-        STA     j0C
+j8472   LDA     varp
+        SBC     temp
+        STA     varp
         BCS     j847C
-        DEC     j0D
+        DEC     varp+1
 j847C   INX
-j847D   LDA     (j0A),Y
-        STA     (j0C),Y
+j847D   LDA     (argp),Y
+        STA     (varp),Y
         INY
         BNE     j847D
-        INC     j0B
-        INC     j0D
+        INC     argp+1
+        INC     varp+1
         DEX
         BNE     j847D
 j848B   RTS
 
-j848C   LDA     j23
+j848C   LDA     tstart+1
         JSR     j84C4
         BCC     j84C3
-        LDA     j11
+        LDA     GS+1
         JSR     j84C4
         BCC     j84C3
-        LDA     j13
+        LDA     GE+1
         JSR     j84C4
         BCC     j84C3
-        LDA     HIMEM+1
+        LDA     tmax+1
         JSR     j84C4
         BCC     j84C3
-        LDX     HIMEM
-        LDY     HIMEM+1
+        LDX     tmax
+        LDY     tmax+1
         JSR     j9A55
-        LDA     j22
+        LDA     tstart
         STA     j04FC
-        LDA     j23
+        LDA     tstart+1
         STA     j04FD
-        LDA     j10
+        LDA     GS
         STA     j04FE
-        LDA     j11
+        LDA     GS+1
         STA     j04FF
 j84C3   RTS
 
-j84C4   CMP     j21
+j84C4   CMP     hymem+1
         BCS     j84CB
-        CMP     OSHWM+1
+        CMP     paje+1
         RTS
 j84CB   CLC
         RTS
 
 vstrng  PLA
-        STA     pointer
+        STA     string
         PLA
-        STA     pointer+1
+        STA     string+1
         TYA
         PHA
         LDY     #&00
         JSR     vstrngMain
         PLA
         TAY
-        JMP     (pointer)
+        JMP     (string)
 vstrngLoop                      ; j84DF
         JSR     OSWRCH
 vstrngMain                      ; j84E2
-        INC     pointer
+        INC     string
         BNE     vstrngNC
-        INC     pointer+1
+        INC     string+1
 vstrngNC
-        LDA     (pointer),Y
+        LDA     (string),Y
         CMP     #nop
         BNE     vstrngLoop
         RTS
 
 toggleCRs
         LDA     #crFlag         ;  A=cr flag bit
-        EOR     flags           ;  toggle the setting
+        EOR     tutmod          ;  toggle the setting
 storeFlags                      ; j84F3
-        STA     flags           ;  write the new value back
+        STA     tutmod          ;  write the new value back
         RTS                     ;  and exit
 
 getInsOverMode                  ; j84F6
         LDA     #insOver        ;  mask for insert/over flag
-        BIT     flags           ;  test current setting
+        BIT     tutmod          ;  test current setting
         RTS                     ;  and exit
 
-j84FB   LDX     j22
-        LDY     j23
-j84FF   STX     j10
-        STY     j11
-        LDA     HIMEM
-        STA     j12
-        LDA     HIMEM+1
-        STA     j13
+j84FB   LDX     tstart
+        LDY     tstart+1
+j84FF   STX     GS
+        STY     GS+1
+        LDA     tmax
+        STA     GE
+        LDA     tmax+1
+        STA     GE+1
         LDY     #&00
-        STY     j39
-        STY     j41
+        STY     cursed
+        STY     nextre
         STY     markCnt
         LDA     #&0D
-        STA     (OSHWM),Y
-        STA     (HIMEM),Y
+        STA     (paje),Y
+        STA     (tmax),Y
         JMP     key_ctrl_up
 
 j851C   JSR     jB24B
-j851F   LDX     j22
-        LDY     j23
+j851F   LDX     tstart
+        LDY     tstart+1
 j8523   JSR     j84FF
 j8526   LDX     #&FF
         TXS
         INX
-        STX     j24
+        STX     brkact
         JSR     j9714
-        LDA     #&05
-        STA     j34
+        LDA     #fullsc
+        STA     update
 
 main_loop
         JSR     jAEC2
         JSR     j991B
         JSR     cursorOn
-        LDA     #&04
-        STA     j34
+        LDA     #harddo
+        STA     update
         JSR     j9863
         TAX
         BPL     j85C1
-        LDX     j39
+        LDX     cursed
         BNE     j85C1
         CMP     #&B0
         BCS     j85C1
         TAX
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         CMP     #&05
         BNE     notDescriptiveMode
@@ -1100,16 +1049,16 @@ descriptiveMode
         NOP
 
         LDA     extHelpTable,Y
-        STA     pointer
+        STA     string
         LDA     extHelpTable+1,Y
-        STA     pointer+1
+        STA     string+1
 j857A   LDY     #&00
         JSR     OSNEWL
         LDX     #&00
-j8581   LDA     (pointer,X)
-        INC     pointer
+j8581   LDA     (string,X)
+        INC     string
         BNE     j8589
-        INC     pointer+1
+        INC     string+1
 j8589   CMP     #&0D
         BEQ     j8597
         CMP     #&EA
@@ -1135,10 +1084,10 @@ notDescriptiveMode
         JMP     main_loop
 
 j85B4   LDA     keyTable,X
-        STA     pointer
+        STA     string
         LDA     keyTable+1,X
-        STA     pointer+1
-        JMP     (pointer)
+        STA     string+1
+        JMP     (string)
 
 j85C1   JSR     j85C7
         JMP     main_loop
@@ -1153,31 +1102,31 @@ j85C7   CMP     #&7F
         JSR     j975C
         BCS     j85E5
         LDY     #&00
-        STY     j36
+        STY     scrnX
         JMP     key_down
 j85E5   LDA     #&0D
 j85E7   PHA
         JSR     j9A97
         JSR     getInsOverMode
         BNE     j85F8
-        LDY     j36
-        LDA     (j12),Y
+        LDY     scrnX
+        LDA     (GE),Y
         CMP     #&0D
         BNE     j85FF
 j85F8   LDX     #&01
-        LDA     j36
+        LDA     scrnX
         JSR     j9AC6
 j85FF   PLA
-        LDY     j36
-        STA     (j12),Y
+        LDY     scrnX
+        STA     (GE),Y
         PHA
         JSR     jB0A5
         PLA
         CMP     #&0D
         BNE     j8616
         PHA
-        LDA     j36
-        LDY     j37
+        LDA     scrnX
+        LDY     scrnY
         JSR     jB05F
         PLA
 j8616   CMP     #&0D
@@ -1186,71 +1135,71 @@ j8616   CMP     #&0D
         JMP     j8626
 j8620   JSR     key_ctrl_left
         JSR     key_down
-j8626   LDA     j34
+j8626   LDA     update
         BEQ     j862D
         JSR     jAEC2
-j862D   LDA     #&01
-        STA     j34
+j862D   LDA     #csrtoc
+        STA     update
 j8631   RTS
 j8632   JSR     j9ABC
         BEQ     j863A
         JMP     key_left
-j863A   LDA     j36
+j863A   LDA     scrnX
         BNE     j8643
         JSR     j9753
         BCS     j8631
 j8643   JSR     key_left
         JSR     j976B
-        CMP     j36
+        CMP     scrnX
         BCS     j864F
-        STA     j36
+        STA     scrnX
 j864F   JSR     getInsOverMode
         BNE     j867B
-        LDY     j36
-        LDA     (j12),Y
+        LDY     scrnX
+        LDA     (GE),Y
         CMP     #&0D
         BEQ     j8631
         LDA     #&20
-        STA     (j12),Y
-        LDA     #&01
-        STA     j34
+        STA     (GE),Y
+        LDA     #csrtoc
+        STA     update
         RTS
 key_copy
         JSR     j975C
         BCC     j8670
-        LDA     j36
-        CMP     j40
+        LDA     scrnX
+        CMP     currle
         BCS     j8631
-j8670   LDA     #&01
-        STA     j34
+j8670   LDA     #csrtoc
+        STA     update
         JSR     j976B
-        CMP     j36
+        CMP     scrnX
         BCC     j8631
 j867B   CLC
-        LDA     j12
-        STA     j06
-        ADC     j36
-        STA     j08
-        LDA     j13
-        STA     j07
+        LDA     GE
+        STA     temp
+        ADC     scrnX
+        STA     addr
+        LDA     GE+1
+        STA     temp+1
         ADC     #&00
-        STA     j09
-        INC     j12
+        STA     addr+1
+        INC     GE
         BNE     j8692
-        INC     j13
-j8692   LDY     j36
+        INC     GE+1
+j8692   LDY     scrnX
         BPL     j869A
-j8696   LDA     (j06),Y
-        STA     (j12),Y
+j8696   LDA     (temp),Y
+        STA     (GE),Y
 j869A   DEY
         BPL     j8696
 j869D   LDX     markCnt
 j869F   DEX
         BMI     j86B4
 j86A2   LDY     j18,X
-        CPY     j08
+        CPY     addr
         LDA     j1A,X
-        SBC     j09
+        SBC     addr+1
         BCS     j869F
         INC     j18,X
         BNE     j869F
@@ -1531,23 +1480,23 @@ j973F   LDA     #&DB
         JSR     OSBYTE
         LDX     #&01
         BNE     j9738
-j9753   LDA     j22
-        CMP     j10
-        LDA     j23
-        SBC     j11
+j9753   LDA     tstart
+        CMP     GS
+        LDA     tstart+1
+        SBC     GS+1
         RTS
 j975C   CLC
-        LDA     j40
-        ADC     j12
+        LDA     currle
+        ADC     GE
         TAX
         LDA     #&00
-        ADC     j13
-        CPX     HIMEM
-        SBC     HIMEM+1
+        ADC     GE+1
+        CPX     tmax
+        SBC     tmax+1
         RTS
-j976B   LDX     j2F
+j976B   LDX     pagewi
         LDY     #&00
-j976F   LDA     (j12),Y
+j976F   LDA     (GE),Y
         CMP     #&0D
         BEQ     j9779
         INY
@@ -1555,19 +1504,19 @@ j976F   LDA     (j12),Y
         BNE     j976F
 j9779   TYA
         RTS
-j977B   STX     j25
-        STY     j26
+j977B   STX     size
+        STY     size+1
         SEC
-        LDA     j12
-        SBC     j25
+        LDA     GE
+        SBC     size
         TAX
-        LDA     j13
-        SBC     j26
+        LDA     GE+1
+        SBC     size+1
 j9789   TAY
-        STX     j06
-        STY     j07
-        CPX     j10
-        SBC     j11
+        STX     temp
+        STY     temp+1
+        CPX     GS
+        SBC     GS+1
         BCC     j9795
         RTS
 j9795   JMP     jBABF
@@ -1590,14 +1539,14 @@ vdu23   LDA     #&17
         NOP
         RTS
 
-j97BB   LDA     flags
+j97BB   LDA     tutmod
         AND     #&07
         CMP     #&02
         BEQ     j97FC
         CMP     #&05
         BEQ     j97FC
         BNE     j9807
-j97C9   LDA     flags
+j97C9   LDA     tutmod
         AND     #&07
         CMP     #&02
         BEQ     j97D5
@@ -1612,52 +1561,52 @@ j97D5   PHA
 
         JSR     jB0EB
         LDA     #&87
-        STA     pointer+1
+        STA     string+1
         LDA     #&4F
-        STA     pointer
+        STA     string
         LDY     #&00
         JSR     vstrngNC
         PLA
         CMP     #&02
         BEQ     j97FC
         LDA     #&89
-        STA     pointer+1
+        STA     string+1
         LDA     #&80
-        STA     pointer
+        STA     string
         JSR     vstrngNC
 
 j97FC   JSR     jB0D7
         JSR     j981C
-        STA     j31
+        STA     realPA
         JSR     j9833
 
 j9807   JSR     j981C
         TAX
         INX
-        LDA     j2F
+        LDA     pagewi
 
 j980E   STA     j0732,X
         DEX
         BPL     j980E
         JSR     j9878
         LDA     #&00
-        STA     j35
+        STA     scrnPY
         RTS
 
 j981C   LDA     #&A0
         LDX     #&0A
         JSR     OSBYTE
-        STX     j2F
-        STY     j30
+        STX     pagewi
+        STY     pagele
         LDX     #&08
         JSR     OSBYTE
         TYA
         CLC
-        SBC     j30
-        STA     j30
+        SBC     pagele
+        STA     pagele
         RTS
 
-j9833   LDA     flags
+j9833   LDA     tutmod
         AND     #&07
         LDY     #&0E
         CMP     #&05
@@ -1669,31 +1618,31 @@ j9843   LDA     #&1C
         JSR     OSWRCH
         LDA     #&00
         JSR     OSWRCH
-        LDA     j31
+        LDA     realPA
         CLC
         ADC     #&01
         JSR     OSWRCH
-        LDA     j2F
+        LDA     pagewi
         JSR     OSWRCH
         TYA
         JMP     OSWRCH
 j985E   LDA     #&1A
         JMP     OSWRCH
-j9863   LDA     j41
+j9863   LDA     nextre
         BEQ     j986E
         LDA     #&00
-        STA     j41
-        LDA     j42
+        STA     nextre
+        LDA     nxtchr
         RTS
 
 j986E   JSR     OSRDCH
         JMP     j8403
 
 j9874   LDA     #&00
-        STA     j34
+        STA     update
 j9878   JSR     j9921
         JSR     jB0EB
-        LDX     j39
+        LDX     cursed
         BEQ     j9897
         JSR     vstrng
         DATA    "Cursor Editing"
@@ -1718,7 +1667,7 @@ j98B5   LDA     markCnt
         NOP
 
 j98C6   JSR     jB0D7
-        LDY     j30
+        LDY     pagele
         INY
         LDA     #&0D
         JMP     jB05F
@@ -1728,11 +1677,11 @@ j98D1   JSR     j98E7
         LDX     #&01
         BNE     j98FB
 
-j98E7   LDY     j30
+j98E7   LDY     pagele
         INY
         JSR     jB051
         LDX     #&00
-j98EF   LDY     j30
+j98EF   LDY     pagele
         INY
         JSR     j9926
         LDX     #&01
@@ -1742,27 +1691,27 @@ j98F9   LDX     #&00
 
 j98FB   JSR     jB0EB
         PLA
-        STA     pointer
+        STA     string
         PLA
-        STA     pointer+1
+        STA     string+1
         LDY     #&00
         JSR     vstrngMain
 
         JSR     jB0D7
         TXA
         BEQ     j9918
-        LDY     j2F
+        LDY     pagewi
         DEY
         TYA
-        LDY     j30
+        LDY     pagele
         STA     j0733,Y
 
-j9918   JMP     (pointer)
+j9918   JMP     (string)
 
-j991B   LDX     j36
-        LDY     j37
+j991B   LDX     scrnX
+        LDY     scrnY
         BPL     j9926
-j9921   LDY     j30
+j9921   LDY     pagele
         INY
 j9924   LDX     #&00
 j9926   LDA     #&1F
@@ -1771,199 +1720,199 @@ j9926   LDA     #&1F
         JSR     OSWRCH
         TYA
         JMP     OSWRCH
-j9933   LDA     j10
-        STA     j06
-        LDA     j11
-        STA     j07
+j9933   LDA     GS
+        STA     temp
+        LDA     GS+1
+        STA     temp+1
         JSR     j994E
-        STA     pointer
+        STA     string
         SEC
-        LDA     j10
-        SBC     pointer
+        LDA     GS
+        SBC     string
         TAX
-        LDA     j11
+        LDA     GS+1
         SBC     #&00
         TAY
         JMP     j99F9
 j994E   CLC
-        LDA     j06
-        SBC     j2F
-        STA     j06
+        LDA     temp
+        SBC     pagewi
+        STA     temp
         BCS     j9959
-        DEC     j07
-j9959   LDY     j2F
-j995B   LDA     (j06),Y
+        DEC     temp+1
+j9959   LDY     pagewi
+j995B   LDA     (temp),Y
         CMP     #&0D
         BEQ     j9966
 j9961   DEY
         BPL     j995B
         BMI     j994E
-j9966   STY     j2C
+j9966   STY     atemp
         SEC
-        LDA     j2F
-        SBC     j2C
+        LDA     pagewi
+        SBC     atemp
         RTS
-j996E   LDX     j12
-        LDY     j13
-        STX     j0E
-        STY     j0F
+j996E   LDX     GE
+        LDY     GE+1
+        STX     TP
+        STY     TP+1
 j9976   TAX
-        STX     j2D
+        STX     count
         BEQ     j9994
 j997B   LDY     #&FF
 j997D   INY
-        LDA     (j0E),Y
+        LDA     (TP),Y
         CMP     #&0D
         BEQ     j9988
-        CPY     j2F
+        CPY     pagewi
         BNE     j997D
-j9988   STA     j2C
+j9988   STA     atemp
         TYA
         JSR     j9995
         BCS     j9994
-        DEC     j2D
+        DEC     count
         BNE     j997B
 j9994   RTS
 j9995   SEC
-        ADC     j0E
+        ADC     TP
         TAX
         LDA     #&00
-        ADC     j0F
+        ADC     TP+1
         TAY
-        CPX     j20
-        SBC     j21
+        CPX     hymem
+        SBC     hymem+1
         BCS     j99A8
-        STX     j0E
-        STY     j0F
+        STX     TP
+        STY     TP+1
 j99A8   RTS
-j99A9   LDX     j10
-        LDY     j11
-        STX     j0E
-        STY     j0F
+j99A9   LDX     GS
+        LDY     GS+1
+        STX     TP
+        STY     TP+1
         TAX
-        STX     j2D
+        STX     count
         BEQ     j99F1
         LDX     #&00
-j99B8   LDA     j22
-        CMP     j0E
-        LDA     j23
-        SBC     j0F
+j99B8   LDA     tstart
+        CMP     TP
+        LDA     tstart+1
+        SBC     TP+1
         BCS     j99F0
         CLC
-        LDA     j0E
-        SBC     j2F
-        STA     j0E
+        LDA     TP
+        SBC     pagewi
+        STA     TP
         BCS     j99CD
-        DEC     j0F
-j99CD   LDY     j2F
-        LDA     (j0E),Y
+        DEC     TP+1
+j99CD   LDY     pagewi
+        LDA     (TP),Y
         CMP     #&0D
         BNE     j99EB
-        LDA     j0E
-        STA     j06
-        LDA     j0F
-        STA     j07
+        LDA     TP
+        STA     temp
+        LDA     TP+1
+        STA     temp+1
         JSR     j9961
         BEQ     j99EB
         TYA
-        ADC     j0E
-        STA     j0E
+        ADC     TP
+        STA     TP
         BCC     j99EB
-        INC     j0F
+        INC     TP+1
 j99EB   INX
-        CPX     j2D
+        CPX     count
         BCC     j99B8
 j99F0   TXA
 j99F1   RTS
 j99F2   JSR     j99A9
-        LDX     j0E
-        LDY     j0F
-j99F9   STX     j0A
-        STY     j0B
+        LDX     TP
+        LDY     TP+1
+j99F9   STX     argp
+        STY     argp+1
         SEC
-        LDA     j10
-        SBC     j0A
-        STX     j10
+        LDA     GS
+        SBC     argp
+        STX     GS
         TAX
-        LDA     j11
-        SBC     j0B
-        STY     j11
+        LDA     GS+1
+        SBC     argp+1
+        STY     GS+1
         TAY
-        STX     j25
-        STY     j26
-        LDA     j12
-        SBC     j25
-        STA     j0C
-        STA     j12
-        LDA     j13
-        SBC     j26
-        STA     j0D
-        STA     j13
-        STX     j25
-        STY     j26
-j9A24   LDA     j25
+        STX     size
+        STY     size+1
+        LDA     GE
+        SBC     size
+        STA     varp
+        STA     GE
+        LDA     GE+1
+        SBC     size+1
+        STA     varp+1
+        STA     GE+1
+        STX     size
+        STY     size+1
+j9A24   LDA     size
         TAY
-        ORA     j26
+        ORA     size+1
         BEQ     j9A4D
-        LDX     j26
+        LDX     size+1
         CLC
         TXA
-        ADC     j0B
-        STA     j0B
+        ADC     argp+1
+        STA     argp+1
         TXA
-        ADC     j0D
-        STA     j0D
+        ADC     varp+1
+        STA     varp+1
         INX
         BCC     j9A3F
-j9A3B   LDA     (j0A),Y
-        STA     (j0C),Y
+j9A3B   LDA     (argp),Y
+        STA     (varp),Y
 j9A3F   DEY
         CPY     #&FF
         BNE     j9A3B
         DEX
         BEQ     j9A4D
-        DEC     j0B
-        DEC     j0D
+        DEC     argp+1
+        DEC     varp+1
         BNE     j9A3B
 j9A4D   RTS
 j9A4E   JSR     j996E
-j9A51   LDX     j0E
-        LDY     j0F
-j9A55   LDA     j12
-        STA     j0A
-        LDA     j13
-        STA     j0B
-        LDA     j10
-        STA     j0C
-        LDA     j11
-        STA     j0D
+j9A51   LDX     TP
+        LDY     TP+1
+j9A55   LDA     GE
+        STA     argp
+        LDA     GE+1
+        STA     argp+1
+        LDA     GS
+        STA     varp
+        LDA     GS+1
+        STA     varp+1
         SEC
         TXA
-        SBC     j12
+        SBC     GE
         TAX
         TYA
-        SBC     j13
+        SBC     GE+1
         TAY
         CLC
         TXA
-        ADC     j10
-        STA     j10
+        ADC     GS
+        STA     GS
         TYA
-        ADC     j11
-        STA     j11
+        ADC     GS+1
+        STA     GS+1
         TXA
-        ADC     j12
-        STA     j12
+        ADC     GE
+        STA     GE
         TYA
-        ADC     j13
-        STA     j13
+        ADC     GE+1
+        STA     GE+1
         JMP     j8450
 j9A86   JSR     j9A97
         CLC
-        LDA     j12
-        ADC     j36
+        LDA     GE
+        ADC     scrnX
         TAX
-        LDA     j13
+        LDA     GE+1
         ADC     #&00
         TAY
         JMP     j9A55
@@ -1971,32 +1920,32 @@ j9A97   JSR     j9ABC
         BEQ     j9AB9
         PHA
         TAX
-        LDA     j40
+        LDA     currle
         JSR     j9AC6
-        LDX     j40
-        LDY     j37
+        LDX     currle
+        LDY     scrnY
         JSR     j9926
         PLA
         TAX
         LDA     #&20
         JSR     OSWRCH
-        LDY     j36
+        LDY     scrnX
 j9AB3   DEY
-        STA     (j12),Y
+        STA     (GE),Y
         DEX
         BNE     j9AB3
 j9AB9   JMP     j991B
 j9ABC   SEC
-        LDA     j36
-        SBC     j40
+        LDA     scrnX
+        SBC     currle
         BCS     j9AC5
         LDA     #&00
 j9AC5   RTS
-j9AC6   STA     j2C
+j9AC6   STA     atemp
         CLC
-        ADC     j12
+        ADC     GE
         PHA
-        LDA     j13
+        LDA     GE+1
         ADC     #&00
         PHA
         TXA
@@ -2004,31 +1953,31 @@ j9AC6   STA     j2C
         LDY     #&00
         JSR     j977B
         LDY     #&00
-j9ADA   LDA     (j12),Y
-        STA     (j06),Y
+j9ADA   LDA     (GE),Y
+        STA     (temp),Y
         INY
-        CPY     j2C
+        CPY     atemp
         BCC     j9ADA
-        STX     j12
-        LDA     j07
-        STA     j13
+        STX     GE
+        LDA     temp+1
+        STA     GE+1
         PLA
-        STA     j2D
+        STA     count
         PLA
-        STA     j07
+        STA     temp+1
         PLA
-        STA     j06
+        STA     temp
         LDY     markCnt
 j9AF4   DEY
         BMI     j9B14
         LDX     j18,Y
-        CPX     j06
+        CPX     temp
         LDA     j1A,Y
-        SBC     j07
+        SBC     temp+1
         BCS     j9AF4
         SEC
         TXA
-        SBC     j2D
+        SBC     count
         STA     j18,Y
         LDA     j1A,Y
         SBC     #&00
@@ -2037,13 +1986,13 @@ j9AF4   DEY
 j9B14   RTS
 key_shift_tab
         LDA     #&00
-        STA     j34
+        STA     update
         LDA     #tabMode
-        EOR     flags
+        EOR     tutmod
         JSR     storeFlags
 
         LDA     #tabMode
-        AND     flags
+        AND     tutmod
         BNE     j9B3E
 
         LDX     #&0E
@@ -2058,31 +2007,31 @@ j9B3E   LDX     #&0E
         NOP
         RTS
 key_tab LDA     #tabMode
-        BIT     flags
+        BIT     tutmod
         BNE     j9B70
-j9B5C   INC     j36
-        LDA     j36
+j9B5C   INC     scrnX
+        LDA     scrnX
         AND     #&07
         BNE     j9B5C
-        LDA     j36
-        CMP     j2F
+        LDA     scrnX
+        CMP     pagewi
         BCC     j9B85
         LDA     #&00
-        STA     j36
+        STA     scrnX
         BCS     j9B85
 j9B70   LDA     #&01
         JSR     j99A9
-        LDX     j2F
+        LDX     pagewi
         LDY     #&00
         LDA     #&20
-j9B7B   CMP     (j0E),Y
+j9B7B   CMP     (TP),Y
         BNE     j9B83
         INY
         DEX
         BNE     j9B7B
-j9B83   STY     j36
+j9B83   STY     scrnX
 j9B85   LDA     #&00
-        STA     j34
+        STA     update
         RTS
 
 j9B8A   DATA    14,13,13
@@ -2146,16 +2095,16 @@ j9B8A   DATA    14,13,13
         NOP
 
 jA2FC   LDA     #>j9B8A
-        STA     pointer
+        STA     string
         LDA     #<j9B8A
-        STA     pointer+1
+        STA     string+1
         LDY     #&00
-jA306   LDA     (pointer),Y
+jA306   LDA     (string),Y
 jA308   JSR     OSASCI
-        INC     pointer
+        INC     string
         BNE     jA311
-        INC     pointer+1
-jA311   LDA     (pointer),Y
+        INC     string+1
+jA311   LDA     (string),Y
         BPL     jA308
 
         JSR     j98F9
@@ -2166,8 +2115,8 @@ jA311   LDA     (pointer),Y
 jA336   JMP     jA2FC
 key_f8  JSR     jBD51
         LDX     #&FF
-        STX     j29
-        STX     j2A
+        STX     pwtflg
+        STX     prtflg
         TXS
 
         JSR     j98E7
@@ -2181,7 +2130,7 @@ jA366   JSR     jBAF6
         BEQ     jA377
         EOR     #&70
         BNE     jA366
-        STA     j2A
+        STA     prtflg
 jA377   JSR     j98E7
         DATA    "C(ontinuous) or P(aged) ?"
         NOP
@@ -2191,12 +2140,12 @@ jA394   JSR     jBAF6
         BEQ     jA3A1
         EOR     #&70
         BNE     jA394
-        STA     j29
+        STA     pwtflg
 jA3A1   JSR     j848C
-        LDA     j22
-        STA     j08
-        LDA     j23
-        STA     j09
+        LDA     tstart
+        STA     addr
+        LDA     tstart+1
+        STA     addr+1
         LDA     #&2E
         STA     j45
         LDX     #&00
@@ -2214,21 +2163,21 @@ jA3B2   LDA     #&00
         STA     j0502
         LDA     #&00
         STA     j4B
-        STA     j4D
+        STA     indexH
         STA     j1D
         STA     j49
         STA     j1B
         STA     j3A
-        STA     j48
+        STA     offset
         STA     j19
         LDA     #&3A
-        STA     j43
+        STA     lineDW
         LDA     #&02
-        STA     j24
+        STA     brkact
         JSR     vstrng
         DATA    &1A,12
         NOP
-        BIT     j2A
+        BIT     prtflg
         BMI     jA400
         LDX     #&00
         LDA     #&05
@@ -2236,9 +2185,9 @@ jA3B2   LDA     #&00
         JSR     OSBYTE
         LDA     #&02
         JSR     OSWRCH
-jA400   BIT     j29
+jA400   BIT     pwtflg
         BMI     jA40D
-        BIT     j2A
+        BIT     prtflg
         BPL     jA40D
         LDA     #&0E
         JSR     OSWRCH
@@ -2248,7 +2197,7 @@ jA40D   LDA     #&4C
         STA     j44
 jA415   LDY     #&00
         LDA     #&0D
-        STA     (j10),Y
+        STA     (GS),Y
         LDA     #&A2
         STA     j0514
         STA     j0516
@@ -2279,24 +2228,24 @@ jA445   LDA     #&00
         STA     j46
 jA45B   LDX     #&80
         STX     j14
-        LDA     j09
+        LDA     addr+1
         CMP     #&A4
         BCS     jA46F
-        LDA     j08
-        CMP     j10
-        LDA     j09
-        SBC     j11
+        LDA     addr
+        CMP     GS
+        LDA     addr+1
+        SBC     GS+1
         BCS     jA4ED
 jA46F   LDX     #&00
-        LDA     (j08,X)
+        LDA     (addr,X)
         CMP     j45
         BNE     jA4BF
         LDY     #&02
-        LDA     (j08),Y
-        STA     j07
+        LDA     (addr),Y
+        STA     temp+1
         DEY
-        LDA     (j08),Y
-        STA     j06
+        LDA     (addr),Y
+        STA     temp
 jA482   CMP     printCommandTable,X
         BEQ     jA4C2
 jA487   INX
@@ -2305,12 +2254,12 @@ jA488   INX
         INX
         CPX     #&AC
         BNE     jA482
-        LDX     j07
+        LDX     temp+1
         JSR     jA7A5
         BCC     jA4BF
-        LDA     j08
+        LDA     addr
         PHA
-        LDA     j09
+        LDA     addr+1
         PHA
         LDA     j45
         PHA
@@ -2318,24 +2267,24 @@ jA488   INX
         LDA     (j5C),Y
         STA     j45
         LDA     j5C
-        STA     j08
+        STA     addr
         LDA     j5D
-        STA     j09
+        STA     addr+1
         LDY     #&02
         JSR     jA4E3
         PLA
         STA     j45
         PLA
-        STA     j09
+        STA     addr+1
         PLA
-        STA     j08
+        STA     addr
         LDY     #&03
         BNE     jA4D3
 jA4BF   JMP     jA535
-jA4C2   LDA     j07
+jA4C2   LDA     temp+1
         CMP     printCommandTable+1,X
         BEQ     jA4CE
-        LDA     j06
+        LDA     temp
         JMP     jA487
 jA4CE   LDY     #&03
         JSR     jA526
@@ -2353,7 +2302,7 @@ jA4E3   JSR     jA797
         JSR     jA9B7
         JMP     jA45B
 jA4ED   JSR     jA761
-        BIT     j2A
+        BIT     prtflg
         BPL     jA516
         JSR     j98F9
         DATA    "Print done, press shift key"
@@ -2363,16 +2312,16 @@ jA516   JSR     vstrng
         DATA    3,15
         NOP
         JSR     jAC88
-        LDX     j10
-        LDY     j11
+        LDX     GS
+        LDY     GS+1
         JMP     j8523
 
 jA526   LDA     printCommandTable+2,X
-        STA     pointer
+        STA     string
         LDA     printCommandTable+3,X
-        STA     pointer+1
+        STA     string+1
         LDA     #&FF
-        JMP     (pointer)
+        JMP     (string)
 
 jA535   LDA     #&FF
         CMP     j44
@@ -2417,14 +2366,14 @@ jA582   DEX
         LDA     #&00
         STA     j14
 jA587   INX
-        STX     j2D
-        BIT     j2A
+        STX     count
+        BIT     prtflg
         BPL     jA594
         JSR     jABEA
         JMP     jA5B4
 jA594   LDA     #&40
-        ORA     j2A
-        STA     j2A
+        ORA     prtflg
+        STA     prtflg
         LDA     j1C
         PHA
         JSR     jABC7
@@ -2433,8 +2382,8 @@ jA594   LDA     #&40
         BIT     j47
         BPL     jA5B4
         LDA     #&BF
-        AND     j2A
-        STA     j2A
+        AND     prtflg
+        STA     prtflg
         JSR     jABEA
         LDA     #&00
         STA     j1C
@@ -2456,17 +2405,17 @@ jA5C6   LDA     #&00
 jA5D2   CLC
         JSR     jA9B7
         JMP     jA445
-jA5D9   LDA     (j08),Y
+jA5D9   LDA     (addr),Y
         INY
         BEQ     jA5E2
         CMP     #&20
         BEQ     jA5D9
 jA5E2   RTS
-jA5E3   LDA     (j08),Y
+jA5E3   LDA     (addr),Y
         CMP     j45
         BNE     jA636
         INY
-jA5EA   LDA     (j08),Y
+jA5EA   LDA     (addr),Y
         CMP     #&62
         BEQ     jA5FC
         CMP     #&6F
@@ -2476,7 +2425,7 @@ jA5EA   LDA     (j08),Y
         CMP     #&65
         BNE     jA633
 jA5FC   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&62
         BEQ     jA607
         CMP     #&75
@@ -2484,7 +2433,7 @@ jA5FC   INY
 jA607   INY
         BNE     jA5E3
 jA60A   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&6E
         BEQ     jA616
         CMP     #&63
@@ -2498,7 +2447,7 @@ jA616   TXA
         TAX
         JMP     jA5E3
 jA621   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&30
         BCC     jA632
         CMP     #&3A
@@ -2507,14 +2456,14 @@ jA621   INY
         JMP     jA607
 jA632   DEY
 jA633   DEY
-        LDA     (j08),Y
+        LDA     (addr),Y
 jA636   RTS
 jA637   INY
-jA638   LDA     (j08),Y
+jA638   LDA     (addr),Y
         CMP     j45
         BNE     jA636
         INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&62
         BEQ     jA66B
         CMP     #&6F
@@ -2524,7 +2473,7 @@ jA638   LDA     (j08),Y
         CMP     #&65
         BNE     jA633
         INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&62
         BEQ     jA662
         EOR     #&75
@@ -2537,7 +2486,7 @@ jA664   STA     j49
         STA     j1E
         JMP     jA637
 jA66B   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&62
         BEQ     jA680
         CMP     #&75
@@ -2551,7 +2500,7 @@ jA680   LDA     #&FF
         STA     j46
         BNE     jA664
 jA686   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&6E
         BEQ     jA692
         CMP     #&63
@@ -2569,7 +2518,7 @@ jA692   TXA
         TAX
         JMP     jA638
 jA6A6   INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&30
         BCC     jA632
         CMP     #&3A
@@ -2577,7 +2526,7 @@ jA6A6   INY
         JSR     jACD4
         TXA
         PHA
-        LDX     j06
+        LDX     temp
 jA6B8   LDA     j5C,X
         JSR     jAB3C
         DEX
@@ -2607,7 +2556,7 @@ jA6E7   JSR     jA9EE
         AND     #&0F
         ASL     A
         STA     j4E
-        LDA     (j08),Y
+        LDA     (addr),Y
         INY
         PHA
         JSR     jA9EE
@@ -2665,7 +2614,7 @@ jA75C   STA     j1E
 jA761   LDA     j44
         JMP     jA95F
 
-jA766   LDA     (j08),Y
+jA766   LDA     (addr),Y
         STA     j45
         INY
         RTS
@@ -2675,20 +2624,20 @@ jA76C   STA     j17
         STA     j18
         RTS
 
-jA773   LDA     j08
-        STA     j06
-        LDA     j09
-        STA     j07
-        LDA     j22
-        STA     j08
-        LDA     j23
-        STA     j09
-        LDA     HIMEM
-        LDX     HIMEM+1
+jA773   LDA     addr
+        STA     temp
+        LDA     addr+1
+        STA     temp+1
+        LDA     tstart
+        STA     addr
+        LDA     tstart+1
+        STA     addr+1
+        LDA     tmax
+        LDX     tmax+1
         JSR     j824D
         JSR     j830E
-        STX     j10
-        STY     j11
+        STX     GS
+        STY     GS+1
         LDX     #&FF
         TXS
         JMP     jA415
@@ -2697,13 +2646,13 @@ jA797   LDA     #&0D
         BNE     jA7A0
 jA79B   INY
         BNE     jA7A0
-        INC     j09
-jA7A0   CMP     (j08),Y
+        INC     addr+1
+jA7A0   CMP     (addr),Y
         BNE     jA79B
         RTS
 
-jA7A5   STA     j06
-        STX     j07
+jA7A5   STA     temp
+        STX     temp+1
         LDX     #&FE
 jA7AB   INX
         INX
@@ -2723,10 +2672,10 @@ jA7C1   LDA     (j5C),Y
         STA     j5E
         LDA     (j5C),Y
         LDY     j4E
-        CMP     j07
+        CMP     temp+1
         BNE     jA7AB
         LDA     j5E
-        CMP     j06
+        CMP     temp
         BNE     jA7AB
         RTS
 jA7D9   CLC
@@ -2742,50 +2691,50 @@ jA7DE   JSR     jA5D9
         CMP     #&45
         BEQ     jA7DC
         TAX
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&0D
         BEQ     jA7DC
         JSR     jA7A5
         BNE     jA7DC
-        LDA     j08
+        LDA     addr
         STA     j0530,X
-        LDA     j09
+        LDA     addr+1
         STA     j0531,X
         BNE     jA81C
 jA801   LDA     #&02
         STA     j1F
         RTS
 
-jA806   LDA     j08
+jA806   LDA     addr
         STA     j0518
-        LDA     j09
+        LDA     addr+1
         STA     j0519
         BNE     jA81C
-jA812   LDA     j08
+jA812   LDA     addr
         STA     j0514
-        LDA     j09
+        LDA     addr+1
         STA     j0515
 jA81C   CLC
         JSR     jA9B7
 jA820   LDY     #&00
-        LDA     (j08),Y
-        INC     j08
+        LDA     (addr),Y
+        INC     addr
         BNE     jA836
         PHA
-        INC     j09
-        LDA     j08
-        CMP     j10
-        LDA     j09
-        SBC     j11
+        INC     addr+1
+        LDA     addr
+        CMP     GS
+        LDA     addr+1
+        SBC     GS+1
         BCS     jA849
         PLA
 jA836   CMP     j45
         BNE     jA820
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&65
         BNE     jA820
         LDY     #&01
-        LDA     (j08),Y
+        LDA     (addr),Y
         CMP     #&6E
         BNE     jA820
         INY
@@ -2804,9 +2753,9 @@ jA852   JSR     jA761
         BCS     jA852
         RTS
 
-jA85C   LDA     j29
+jA85C   LDA     pwtflg
         BMI     jA867
-        LDA     j2A
+        LDA     prtflg
         BPL     jA86C
         JSR     jACB4
 jA867   LDA     #&0C
@@ -2815,15 +2764,15 @@ jA867   LDA     #&0C
 jA86C   JSR     jA867
         JMP     jACB4
 
-jA872   LDA     j08
+jA872   LDA     addr
         STA     j051A
-        LDA     j09
+        LDA     addr+1
         STA     j051B
         JMP     jA806
 
-jA87F   LDA     j08
+jA87F   LDA     addr
         STA     j0516
-        LDA     j09
+        LDA     addr+1
         STA     j0517
         JMP     jA812
 
@@ -2842,11 +2791,11 @@ jA897   LDX     j1B
 jA89F   CLC
         JSR     jA9B7
         JSR     jAC88
-        LDX     j08
-        LDY     j09
+        LDX     addr
+        LDY     addr+1
         LDA     #&80
         JSR     OSFIND
-        STA     j4D
+        STA     indexH
         LDY     #&00
         JMP     jA797
 
@@ -2899,15 +2848,15 @@ jA901   STA     j3A
 jA904   STA     j19
         RTS
 
-jA907   LDA     j08
+jA907   LDA     addr
         STA     j051A
-        LDA     j09
+        LDA     addr+1
         STA     j051B
         JMP     jA81C
 
-jA914   LDA     j08
+jA914   LDA     addr
         STA     j0516
-        LDA     j09
+        LDA     addr+1
         STA     j0517
         JMP     jA81C
 
@@ -2919,26 +2868,26 @@ jA921   JSR     jA761
 
 jA92B   CLC
         JSR     jA9B7
-        LDX     j08
-        LDY     j09
+        LDX     addr
+        LDY     addr+1
         JSR     OSCLI
         LDY     #&00
         JMP     jA797
 
-jA93B   LDX     j43
+jA93B   LDX     lineDW
         JSR     jA9C1
         TXA
         BEQ     jA94C
-        STA     j43
+        STA     lineDW
         LDX     j44
         INX
         BEQ     jA94C
         STA     j44
 jA94C   RTS
 
-jA94D   LDX     j48
+jA94D   LDX     offset
         JSR     jA9C1
-        STA     j48
+        STA     offset
         RTS
 
 jA955   STA     j18
@@ -2988,12 +2937,12 @@ jA997   JSR     jA9C1
         STX     j3B
         RTS
 
-jA99D   LDA     (j08),Y
+jA99D   LDA     (addr),Y
         CMP     #&0D
         BEQ     jA9B1
         TAX
         INY
-        LDA     (j08),Y
+        LDA     (addr),Y
         DEY
         CMP     #&0D
         BEQ     jA9B1
@@ -3005,10 +2954,10 @@ jA9B2   STA     j1C
         STA     j47
         RTS
 jA9B7   TYA
-        ADC     j08
-        STA     j08
+        ADC     addr
+        STA     addr
         BCC     jA9C0
-        INC     j09
+        INC     addr+1
 jA9C0   RTS
 jA9C1   JSR     jA5D9
         CMP     #&2D
@@ -3028,10 +2977,10 @@ jA9DB   TAX
 jA9DD   TXA
         PHA
         JSR     jA9EE
-        STA     j06
+        STA     temp
         PLA
         SEC
-        SBC     j06
+        SBC     temp
         BCS     jA9DB
         LDA     #&00
         TAX
@@ -3039,7 +2988,7 @@ jA9DD   TXA
 jA9EE   LDX     #&00
         JSR     jA5D9
         DEY
-jA9F4   LDA     (j08),Y
+jA9F4   LDA     (addr),Y
         CMP     #&30
         BCC     jAA16
         CMP     #&3A
@@ -3049,15 +2998,15 @@ jA9F4   LDA     (j08),Y
         TXA
         ASL     A
         ASL     A
-        STA     j06
+        STA     temp
         TXA
         CLC
-        ADC     j06
+        ADC     temp
         ASL     A
-        STA     j06
+        STA     temp
         PLA
         CLC
-        ADC     j06
+        ADC     temp
         TAX
         INY
         BNE     jA9F4
@@ -3073,7 +3022,7 @@ jAA18   LDX     j0514
         LDY     j0517
 jAA2A   DEC     j44
         JSR     jAA41
-        LDA     j43
+        LDA     lineDW
         STA     j44
         LDA     #&01
         STA     j0502
@@ -3082,9 +3031,9 @@ jAA2A   DEC     j44
         STA     j0503
         RTS
 
-jAA41   LDA     j08
+jAA41   LDA     addr
         PHA
-        LDA     j09
+        LDA     addr+1
         PHA
         LDA     j45
         PHA
@@ -3124,10 +3073,10 @@ jAA41   LDA     j08
         STA     j1B
         LDA     #&01
         STA     j1F
-        STX     j08
-        STY     j09
+        STX     addr
+        STY     addr+1
         LDY     #&00
-        LDA     (j08),Y
+        LDA     (addr),Y
         STA     j45
         LDY     #&03
         CLC
@@ -3164,9 +3113,9 @@ jAA41   LDA     j08
         PLA
         STA     j45
         PLA
-        STA     j09
+        STA     addr+1
         PLA
-        STA     j08
+        STA     addr
         RTS
 
 jAACB   TAY
@@ -3226,7 +3175,7 @@ jAB3C   BIT     jFF
         BMI     jAB74
         CMP     #&20
         BCC     jAB69
-        BIT     j2A
+        BIT     prtflg
         BMI     jAAD9
         BVS     jAB56
         LDA     #&20
@@ -3235,7 +3184,7 @@ jAB3C   BIT     jFF
         LDA     #&5F
 jAB56   PHA
         LDA     #&20
-        BIT     j2A
+        BIT     prtflg
         BNE     jAB68
         BIT     j1E
         BMI     jAB68
@@ -3252,7 +3201,7 @@ jAB71   JMP     (j020E)
 jAB74   STY     j4E
         TAY
         LDA     j0600,Y
-        LDY     j4D
+        LDY     indexH
         BEQ     jAB81
         JSR     OSBPUT
 jAB81   LDY     j4E
@@ -3291,8 +3240,8 @@ jABC2   PLA
         TAX
 jABC6   RTS
 jABC7   LDA     #&20
-        ORA     j2A
-        STA     j2A
+        ORA     prtflg
+        STA     prtflg
         LDA     j1E
         PHA
         JSR     jABEA
@@ -3301,14 +3250,14 @@ jABC7   LDA     #&20
         BIT     j46
         BPL     jABC6
         LDA     #&DF
-        AND     j2A
-        STA     j2A
+        AND     prtflg
+        STA     prtflg
         JSR     jABEA
         LDA     #&20
-        ORA     j2A
-        STA     j2A
+        ORA     prtflg
+        STA     prtflg
         RTS
-jABEA   LDA     j48
+jABEA   LDA     offset
         JSR     jAC94
         LDA     #&00
         STA     j16
@@ -3316,7 +3265,7 @@ jABEA   LDA     j48
         BNE     jABFE
         SEC
         LDA     j3C
-        SBC     j2D
+        SBC     count
         STA     j16
 jABFE   LDA     j3B
         CMP     #&FF
@@ -3329,14 +3278,14 @@ jAC06   JSR     jAC94
         LDA     j3C
         ADC     #&00
         SEC
-        SBC     j2D
+        SBC     count
         JSR     jAC95
 jAC18   BIT     j18
         BPL     jAC26
         SEC
         LDA     j3C
         ADC     #&01
-        SBC     j2D
+        SBC     count
         JSR     jAC94
 jAC26   LDY     #&00
         LDX     #&00
@@ -3385,14 +3334,14 @@ jAC78   LDA     #&20
 jAC7A   JSR     jAB3C
         INY
         INX
-        CPX     j2D
+        CPX     count
         BCC     jAC4A
         LDA     #&0D
 jAC85   JMP     jAB3C
-jAC88   LDY     j4D
+jAC88   LDY     indexH
         BEQ     jAC93
         LDA     #&00
-        STA     j4D
+        STA     indexH
         JSR     OSFIND
 jAC93   RTS
 jAC94   ASL     A
@@ -3400,7 +3349,7 @@ jAC95   LSR     A
         BEQ     jACB3
         TAX
         LDA     #&09
-        BIT     j2A
+        BIT     prtflg
         BMI     jACA1
         LDA     #&20
 jACA1   BIT     j4B
@@ -3441,12 +3390,12 @@ jACD4   STA     j4E
         ASL     A
         TAX
         LDA     j0500,X
-        STA     j06
+        STA     temp
         LDA     j0501,X
         TAX
         AND     #&0F
-        STA     j07
-        ORA     j06
+        STA     temp+1
+        ORA     temp
         PHP
         TXA
         LSR     A
@@ -3470,33 +3419,33 @@ jAD04   PHA
 jAD0F   LDA     #&30
         STA     j5C,X
         SEC
-jAD14   LDA     j06
+jAD14   LDA     temp
         SBC     jBCD7,X
         TAY
-        LDA     j07
+        LDA     temp+1
         SBC     jBCDC,X
         BCC     jAD29
-        STY     j06
-        STA     j07
+        STY     temp
+        STA     temp+1
         INC     j5C,X
         BNE     jAD14
 jAD29   DEX
         BPL     jAD0F
         PLA
-        STA     j06
+        STA     temp
         LDX     #&08
 jAD31   DEX
-        CPX     j06
+        CPX     temp
         BEQ     jAD3C
         LDA     j5C,X
         AND     #&0F
         BEQ     jAD31
-jAD3C   STX     j06
+jAD3C   STX     temp
         PLA
         TAY
         PLA
         SEC
-        ADC     j06
+        ADC     temp
         TAX
         RTS
 jAD46   PHA
@@ -3506,14 +3455,14 @@ jAD46   PHA
         PHA
         LDX     #&0C
 jAD50   SEC
-        LDA     j06
+        LDA     temp
         SBC     jADC2,X
         TAY
-        LDA     j07
+        LDA     temp+1
         SBC     jADCF,X
         BCC     jAD74
-        STY     j06
-        STA     j07
+        STY     temp
+        STA     temp+1
         TXA
         ASL     A
         TAY
@@ -3535,30 +3484,30 @@ jAD77   PLA
 jAD80   PLA
         AND     #&01
         BEQ     jAD3C
-        STX     j06
+        STX     temp
 jAD87   LDA     j5C,X
         ORA     #&20
         STA     j5C,X
         DEX
         BPL     jAD87
-        LDX     j06
+        LDX     temp
         JMP     jAD3C
-jAD95   LDA     j06
+jAD95   LDA     temp
         BNE     jAD9B
-        DEC     j07
-jAD9B   DEC     j06
+        DEC     temp+1
+jAD9B   DEC     temp
         LDY     #&00
-jAD9F   LDA     j06
+jAD9F   LDA     temp
         SEC
 jADA2   INY
         SBC     #&1A
         BCS     jADA2
-        STA     j06
-        LDA     j07
+        STA     temp
+        LDA     temp+1
         BEQ     jADB2
-        DEC     j07
+        DEC     temp+1
         JMP     jAD9F
-jADB2   LDA     j06
+jADB2   LDA     temp
         ADC     #&5B
         LDX     #&00
 jADB8   STA     j5C,X
@@ -3674,52 +3623,52 @@ jAEC2   LDA     #&00
         STA     j5D
         JSR     cursorOff
         JSR     j976B
-        STA     j40
+        STA     currle
         JSR     jBCE1
-        LDA     j34
-        CMP     #&05
+        LDA     update
+        CMP     #fullsc
         BNE     jAEDA
         JSR     j97C9
-jAEDA   LDA     j35
-        CMP     j34
+jAEDA   LDA     scrnPY
+        CMP     update
         BCC     jAEE2
-        STA     j34
+        STA     update
 jAEE2   LDA     #&00
-        STA     j35
-        LDA     j34
+        STA     scrnPY
+        LDA     update
         BEQ     jAF27
         CMP     #&04
         BEQ     jAEF2
         CMP     #&05
         BNE     jAF0A
-jAEF2   LDA     j37
+jAEF2   LDA     scrnY
         JSR     j99A9
-        STA     j37
+        STA     scrnY
         TAY
         DEY
-        STY     j33
+        STY     maxscr
         BMI     jAF0A
         LDA     #&00
-        LDX     j0E
-        LDY     j0F
+        LDX     TP
+        LDY     TP+1
         JSR     jAF7A
         BCS     jAF1D
-jAF0A   LDX     j34
+jAF0A   LDX     update
         CPX     #&02
         BEQ     jAF2C
         CPX     #&03
         BEQ     jAF4D
-        LDY     j30
-        STY     j33
+        LDY     pagele
+        STY     maxscr
         JSR     jAF74
         BCC     jAF27
-jAF1D   LDA     #&01
-        CMP     j34
+jAF1D   LDA     #csrtoc
+        CMP     update
         BCS     jAF25
-        LDA     #&04
-jAF25   STA     j35
+        LDA     #harddo
+jAF25   STA     scrnPY
 jAF27   LDA     #&00
-        STA     j34
+        STA     update
         RTS
 jAF2C   JSR     j9921
         LDA     #&0A
@@ -3728,17 +3677,17 @@ jAF2C   JSR     j9921
 jAF36   INY
         LDA     j0733,Y
         STA     j0732,Y
-        CPY     j30
+        CPY     pagele
         BNE     jAF36
         LDA     #&00
         STA     j0733,Y
         JSR     j9878
-        LDA     j30
+        LDA     pagele
         BNE     jAF68
 jAF4D   JSR     vstrng
         DFB     &1E,&0B
         NOP
-        LDY     j30
+        LDY     pagele
 jAF55   LDA     j0732,Y
         STA     j0733,Y
         DEY
@@ -3747,109 +3696,109 @@ jAF55   LDA     j0732,Y
         STA     j0732
         JSR     j9878
         LDA     #&00
-jAF68   STA     j33
+jAF68   STA     maxscr
         LDX     j66
         LDY     j67
         BNE     jAF7A
         TAY
         JMP     jB051
-jAF74   LDA     j37
-        LDX     j12
-        LDY     j13
-jAF7A   STA     j32
-        STX     j0E
-        STY     j0F
-        LDA     j34
-        CMP     #&02
+jAF74   LDA     scrnY
+        LDX     GE
+        LDY     GE+1
+jAF7A   STA     scrupY
+        STX     TP
+        STY     TP+1
+        LDA     update
+        CMP     #csronw
         BEQ     jAFA5
         CMP     #&03
         BEQ     jAFA5
         CMP     #&01
         BNE     jAFA2
         JSR     jB02F
-        LDX     j36
-        CPX     j40
+        LDX     scrnX
+        CPX     currle
         BCC     jAF99
-        LDX     j40
-jAF99   LDY     j32
+        LDX     currle
+jAF99   LDY     scrupY
         JSR     j9926
         TXA
         TAY
         BPL     jAFAD
 jAFA2   JSR     jB02F
-jAFA5   LDY     j32
+jAFA5   LDY     scrupY
         JSR     j9924
         LDY     #&FF
 jAFAC   INY
-jAFAD   LDA     (j0E),Y
+jAFAD   LDA     (TP),Y
         PHA
         JSR     jB0A5
         PLA
         CMP     #&0D
         BEQ     jAFBF
-        CPY     j2F
+        CPY     pagewi
         BNE     jAFAC
         TYA
         BNE     jAFC0
 jAFBF   TYA
-jAFC0   STY     j2D
+jAFC0   STY     count
         LDY     markCnt
 jAFC4   DEY
         BMI     jAFF6
-        STY     j2E
+        STY     index
         SEC
         LDA     j1C,Y
-        SBC     j0E
+        SBC     TP
         TAX
         LDA     j1E,Y
-        SBC     j0F
+        SBC     TP+1
         BCC     jAFC4
         BNE     jAFC4
-        CPX     j2D
+        CPX     count
         BEQ     jAFDF
         BCS     jAFC4
-jAFDF   LDY     j32
+jAFDF   LDY     scrupY
         JSR     j9926
-        LDA     j2E
+        LDA     index
         CLC
         ADC     #&31
         JSR     jB0C2
-        LDX     j2D
+        LDX     count
         INX
         JSR     j9926
-        LDY     j2E
+        LDY     index
         BPL     jAFC4
-jAFF6   LDA     j2D
-        LDY     j32
+jAFF6   LDA     count
+        LDY     scrupY
         JSR     jB05F
         JSR     j9995
         BCC     jB010
         INC     j5D
-        LDX     j2D
-        LDY     j32
+        LDX     count
+        LDY     scrupY
         JSR     j9926
         LDA     #&2A
         JSR     jB0C2
-jB010   LDY     j32
-        CPY     j33
+jB010   LDY     scrupY
+        CPY     maxscr
         BCS     jB02D
-        INC     j32
+        INC     scrupY
         LDA     j5D
         BNE     jB01F
         JMP     jAFA2
 jB01F   JSR     jB02F
-        LDY     j32
+        LDY     scrupY
         JSR     jB051
-        INC     j32
-        CPY     j30
+        INC     scrupY
+        CPY     pagele
         BCC     jB01F
 jB02D   CLC
         RTS
 
-jB02F   LDA     j34
-        CMP     #&05
+jB02F   LDA     update
+        CMP     #fullsc
         BEQ     jB050
-        LDA     j41
+        LDA     nextre
         BNE     jB04D
         LDA     #&81
         LDX     #&00
@@ -3858,8 +3807,8 @@ jB02F   LDA     j34
         CPY     #&FF
         BEQ     jB050
         JSR     j8403
-        INC     j41
-        STX     j42
+        INC     nextre
+        STX     nxtchr
 jB04D   PLA
         PLA
         SEC
@@ -3873,20 +3822,20 @@ jB051   TYA
         PLA
         TAY
         LDA     #&00
-jB05F   STA     j2C
+jB05F   STA     atemp
         LDA     j0732,Y
-        CMP     j2C
+        CMP     atemp
         BCC     jB09F
         BEQ     jB09F
         LDA     #&1C
         JSR     OSWRCH
-        LDA     j2C
+        LDA     atemp
         CLC
         ADC     #&01
         JSR     OSWRCH
         TXA
         PHA
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         TAX
         TYA
@@ -3907,7 +3856,7 @@ jB05F   STA     j2C
         JSR     j9833
         PLA
         TAY
-jB09F   LDA     j2C
+jB09F   LDA     atemp
         STA     j0732,Y
         RTS
 jB0A5   CMP     #&20
@@ -3919,13 +3868,13 @@ jB0A5   CMP     #&20
 jB0B1   CMP     #&0D
         BNE     jB0C0
         LDA     #crFlag
-        BIT     flags
+        BIT     tutmod
         BNE     jB0BE
 jB0BB   JMP     OSWRCH
 jB0BE   LDA     #&0D
 jB0C0   ORA     #&40
 jB0C2   PHA
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         CMP     #&07
         BNE     jB0D0
@@ -3950,77 +3899,77 @@ jB0EB   JSR     vstrng
 key_left
         JSR     j9753
         BCC     jB0FD
-        LDA     j36
+        LDA     scrnX
         BEQ     jB13A
-jB0FD   DEC     j36
+jB0FD   DEC     scrnX
         BPL     jB13A
-        LDA     j2F
-        STA     j36
+        LDA     pagewi
+        STA     scrnX
 key_up  JSR     j9753
         BCS     jB13A
         LDA     #&01
         JSR     j99F2
-        LDA     j50
-        CMP     j37
+        LDA     TSM
+        CMP     scrnY
         BCS     jB119
-jB115   DEC     j37
+jB115   DEC     scrnY
         BPL     jB13A
-jB119   LDA     j37
+jB119   LDA     scrnY
         JSR     j99A9
-        CMP     j37
+        CMP     scrnY
         CLC
         BNE     jB115
-        LDA     j0E
+        LDA     TP
         STA     j66
-        LDA     j0F
+        LDA     TP+1
         STA     j67
-        LDA     #&03
-        STA     j34
+        LDA     #hardup
+        STA     update
         RTS
 key_ctrl_left
         LDA     #&00
-        STA     j36
+        STA     scrnX
         BEQ     jB13A
 key_ctrl_right
-        LDA     j40
-        STA     j36
+        LDA     currle
+        STA     scrnX
 jB13A   LDA     #&00
-        STA     j34
+        STA     update
         RTS
 key_right
-        LDA     j36
-        CMP     j2F
+        LDA     scrnX
+        CMP     pagewi
         BEQ     jB149
-        INC     j36
+        INC     scrnX
         BPL     jB13A
 jB149   JSR     j975C
         BCS     jB13A
         LDA     #&00
-        STA     j36
+        STA     scrnX
 key_down
         JSR     j975C
         BCS     jB13A
         LDA     #&01
         JSR     j9A4E
-        LDA     j37
-        CMP     j51
+        LDA     scrnY
+        CMP     BSM
         BCS     jB166
-        INC     j37
+        INC     scrnY
         BPL     jB13A
 jB166   LDA     #&00
         STA     j67
         SEC
-        LDA     j30
-        SBC     j51
+        LDA     pagele
+        SBC     BSM
         JSR     j996E
-        LDA     j2D
+        LDA     count
         BNE     jB17E
-        LDA     j0E
+        LDA     TP
         STA     j66
-        LDA     j0F
+        LDA     TP+1
         STA     j67
-jB17E   LDA     #&02
-        STA     j34
+jB17E   LDA     #csronw
+        STA     update
         CLC
         RTS
 jB184   CMP     #&30
@@ -4034,8 +3983,8 @@ jB184   CMP     #&30
 jB194   RTS
 jB195   SEC
         RTS
-jB197   LDY     j36
-        LDA     (j12),Y
+jB197   LDY     scrnX
+        LDA     (GE),Y
         CMP     #&0D
         BNE     jB1AD
         JSR     key_down
@@ -4048,27 +3997,27 @@ jB1AA   PLA
 jB1AD   JSR     key_right
         JSR     jAEC2
         LDA     #&00
-        STA     j34
+        STA     update
         RTS
 key_shift_right
-        LDA     j40
-        CMP     j36
+        LDA     currle
+        CMP     scrnX
         BCS     jB1C5
-        STA     j36
+        STA     scrnX
         BCC     jB1C5
 jB1C2   JSR     jB197
-jB1C5   LDY     j36
-        LDA     (j12),Y
+jB1C5   LDY     scrnX
+        LDA     (GE),Y
         JSR     jB184
         BCC     jB1C2
-jB1CE   LDY     j36
-        LDA     (j12),Y
+jB1CE   LDY     scrnX
+        LDA     (GE),Y
         JSR     jB184
         BCC     jB1DD
         JSR     jB197
         JMP     jB1CE
 jB1DD   RTS
-jB1DE   LDA     j36
+jB1DE   LDA     scrnX
         BNE     jB1ED
         JSR     key_up
         BCS     jB1AA
@@ -4076,54 +4025,54 @@ jB1DE   LDA     j36
         JMP     key_ctrl_right
 jB1ED   JMP     key_left
 key_shift_left
-        LDA     j40
-        CMP     j36
+        LDA     currle
+        CMP     scrnX
         BCS     jB1F9
-        STA     j36
+        STA     scrnX
         RTS
 jB1F9   JSR     jB1DE
-        LDY     j36
-        LDA     (j12),Y
+        LDY     scrnX
+        LDA     (GE),Y
         JSR     jB184
         BCC     jB1F9
-jB205   LDY     j36
-        LDA     (j12),Y
+jB205   LDY     scrnX
+        LDA     (GE),Y
         JSR     jB184
         BCC     jB214
         JSR     jB1DE
         JMP     jB205
 jB214   JMP     key_right
-key_sup LDA     j30
+key_sup LDA     pagele
         CLC
         ADC     #&01
         JMP     j99F2
 key_shift_down
-        LDA     j30
+        LDA     pagele
         CLC
         ADC     #&01
         JMP     j9A4E
 key_ctrl_up
-        LDX     j22
-        LDY     j23
+        LDX     tstart
+        LDY     tstart+1
         JSR     j99F9
         LDA     #&00
-        STA     j36
+        STA     scrnX
         RTS
 key_ctrl_down
-        LDA     j51
-        STA     j37
-        LDX     HIMEM
-        LDY     HIMEM+1
+        LDA     BSM
+        STA     scrnY
+        LDX     tmax
+        LDY     tmax+1
         JSR     j9A55
         JMP     jBE02
 key_shift_f1
-        LDA     flags
+        LDA     tutmod
         EOR     #insOver
         JSR     storeFlags
         JMP     j9874
 jB24B   LDA     #&16
         JSR     OSWRCH
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         TAY
         LDA     jB481,Y
@@ -4131,48 +4080,48 @@ jB24B   LDA     #&16
         JSR     OSWRCH
         LDA     #&83
         JSR     OSBYTE
-        STX     OSHWM
-        STY     OSHWM+1
+        STX     paje
+        STY     paje+1
         LDA     #&84
         JSR     OSBYTE
-        STX     j20
-        STY     j21
+        STX     hymem
+        STY     hymem+1
         CLC
-        LDA     OSHWM
+        LDA     paje
         ADC     #&01
-        STA     j22
-        LDA     OSHWM+1
+        STA     tstart
+        LDA     paje+1
         ADC     #&00
-        STA     j23
-        LDA     j20
+        STA     tstart+1
+        LDA     hymem
         SBC     #&00
-        STA     HIMEM
-        LDA     j21
+        STA     tmax
+        LDA     hymem+1
         SBC     #&00
-        STA     HIMEM+1
+        STA     tmax+1
         JSR     j97BB
-        LDA     j30
+        LDA     pagele
         SEC
         SBC     #&04
-        STA     j51
+        STA     BSM
         LDA     #&04
-        STA     j50
+        STA     TSM
         RTS
 key_ctrl_f6
-        LDA     j37
-        STA     j50
+        LDA     scrnY
+        STA     TSM
         BPL     jB2AB
 key_ctrl_f7
-        LDA     j37
-        STA     j51
+        LDA     scrnY
+        STA     BSM
         BPL     jB2AB
 key_shift_f3
         LDA     #&00
-        STA     j50
-        LDA     j30
-jB2A9   STA     j51
+        STA     TSM
+        LDA     pagele
+jB2A9   STA     BSM
 jB2AB   LDA     #&00
-        STA     j34
+        STA     update
         RTS
 key_shift_f9
         JSR     j98E7
@@ -4185,8 +4134,8 @@ key_shift_f9
         JSR     j8403
         CPY     #&00
         BEQ     jB2EC
-        LDA     #&05
-        STA     j34
+        LDA     #fullsc
+        STA     update
         RTS
 jB2EC   JSR     j848C
         JMP     j851F
@@ -4217,14 +4166,14 @@ jB340   JSR     j98D1
         JSR     j83A4
         JSR     jBD94
         LDY     #&00
-        LDA     (j06),Y
+        LDA     (temp),Y
         CMP     #&0D
         BEQ     jB384
         CMP     #&8B
         BEQ     jB384
-        LDA     j06
+        LDA     temp
         STA     j52
-        LDA     j07
+        LDA     temp+1
         STA     j53
         JSR     j836A
         LDX     j68
@@ -4243,22 +4192,22 @@ key_shift_f2
         DATA    "to insert:"
         NOP
         JSR     j83A4
-        LDA     j10
-        STA     j08
-        LDA     j11
-        STA     j09
-        LDA     j12
-        LDX     j13
+        LDA     GS
+        STA     addr
+        LDA     GS+1
+        STA     addr+1
+        LDA     GE
+        LDX     GE+1
         LDY     #&00
         JSR     j82FC
-        STX     j10
-        STY     j11
-        LDX     j08
-        LDY     j09
+        STX     GS
+        STY     GS+1
+        LDX     addr
+        LDY     addr+1
         JSR     j99F9
         JMP     j9933
 key_f1  LDA     #&01
-        STA     j24
+        STA     brkact
         JSR     j973F
         JSR     j98E7
         DATA    "Command line"
@@ -4292,12 +4241,12 @@ jB41B   JSR     vstrng
 
         LDA     #&87
         JSR     OSBYTE
-        LDA     flags
+        LDA     tutmod
         AND     #&07
         TAX
         LDA     jB481,X
-        STY     pointer
-        EOR     pointer
+        STY     string
+        EOR     string
         AND     #&07
         BEQ     jB450
         LDA     #&16
@@ -4309,7 +4258,7 @@ jB450   JSR     j9714
         JMP     j8526
 key_shift_copy
         LDA     #&01
-        STA     j39
+        STA     cursed
         JSR     j973F
         JMP     j9874
 jB460   BRK
@@ -4325,7 +4274,7 @@ key_shift_f5
         JSR     j83A4
         BEQ     jB460
         LDX     #&00
-        LDA     (j06,X)
+        LDA     (temp,X)
         AND     #&DF
         CMP     #&44
         BEQ     jB4C2
@@ -4361,45 +4310,45 @@ jB4C4   PHA
         TAX
         LDA     #&85
         JSR     OSBYTE
-        CPX     j10
+        CPX     GS
         TYA
-        SBC     j11
+        SBC     GS+1
         BCC     jB54A
 jB4E9   PLA
         TAX
         LDA     #&F8
-        AND     flags
-        STA     flags
+        AND     tutmod
+        STA     tutmod
         PLA
-        ORA     flags
+        ORA     tutmod
         JSR     storeFlags
         JSR     jB24B
 key_f9  LDA     j04FF
-        CMP     OSHWM+1
+        CMP     paje+1
         BCC     jB556
-        CMP     j21
+        CMP     hymem+1
         BCS     jB556
         CMP     j04FD
         BCC     jB556
         LDA     j04FD
-        CMP     OSHWM+1
+        CMP     paje+1
         BCC     jB556
         LDA     j04FC
-        STA     j0A
+        STA     argp
         LDA     j04FD
-        STA     j0B
+        STA     argp+1
         SEC
         LDA     j04FE
-        SBC     j0A
+        SBC     argp
         TAX
         LDA     j04FF
-        SBC     j0B
+        SBC     argp+1
         TAY
         BCC     jB556
-        LDA     j22
-        STA     j0C
-        LDA     j23
-        STA     j0D
+        LDA     tstart
+        STA     varp
+        LDA     tstart+1
+        STA     varp+1
         TYA
         PHA
         TXA
@@ -4407,10 +4356,10 @@ key_f9  LDA     j04FF
         JSR     j8450
         PLA
         CLC
-        ADC     j22
+        ADC     tstart
         TAX
         PLA
-        ADC     j23
+        ADC     tstart+1
         TAY
         LDA     #&00
         STA     j04FF
@@ -4423,18 +4372,18 @@ jB556   BRK
         BRK
 
 jB56A   LDA     #&00
-        STA     j2E
+        STA     index
         STA     j4B
         STA     j4C
-jB572   LDY     j2E
-        LDA     (j06),Y
+jB572   LDY     index
+        LDA     (temp),Y
         CMP     #&0D
         BEQ     jB5AD
         CMP     #&3A
         BCS     jB5FD
         SBC     #&2F
         BCC     jB5FD
-        STA     j2C
+        STA     atemp
         LDA     #&0A
         LDX     #&00
         LDY     #&00
@@ -4453,36 +4402,36 @@ jB58A   PHA
         BNE     jB58A
         TXA
         CLC
-        ADC     j2C
+        ADC     atemp
         STA     j4B
         BCC     jB5A7
         INY
         BEQ     jB5FD
 jB5A7   STY     j4C
-        INC     j2E
+        INC     index
         BNE     jB572
 jB5AD   RTS
 key_f0  LDA     #&01
         STA     j4B
         LDY     #&00
         STY     j4C
-        LDA     j22
-        STA     pointer
-        LDA     j23
-        STA     pointer+1
-jB5BE   LDA     (pointer),Y
+        LDA     tstart
+        STA     string
+        LDA     tstart+1
+        STA     string+1
+jB5BE   LDA     (string),Y
         CMP     #&0D
         BNE     jB5CA
         INC     j4B
         BNE     jB5CA
         INC     j4C
-jB5CA   INC     pointer
+jB5CA   INC     string
         BNE     jB5D0
-        INC     pointer+1
-jB5D0   LDA     pointer
-        CMP     j10
-        LDA     pointer+1
-        SBC     j11
+        INC     string+1
+jB5D0   LDA     string
+        CMP     GS
+        LDA     string+1
+        SBC     GS+1
         BCC     jB5BE
         JSR     j98E7
         DATA    "At line "
@@ -4509,17 +4458,17 @@ jB61A   JSR     jB56A
         STA     j4C
         BCC     jB5FD
         JSR     key_ctrl_up
-        LDA     j12
-        STA     j0E
-        LDA     j13
-        STA     j0F
+        LDA     GE
+        STA     TP
+        LDA     GE+1
+        STA     TP+1
 jB637   LDA     j4B
         ORA     j4C
         BEQ     jB655
 jB63D   LDA     #&01
         JSR     j9976
         BCS     jB609
-        LDA     j2C
+        LDA     atemp
         CMP     #&0D
         BNE     jB63D
         LDA     j4B
@@ -4527,17 +4476,17 @@ jB63D   LDA     #&01
         DEC     j4C
 jB650   DEC     j4B
         JMP     jB637
-jB655   LDA     j50
+jB655   LDA     TSM
         BNE     jB65B
         LDA     #&04
-jB65B   STA     j37
+jB65B   STA     scrnY
         JMP     j9A51
 jB660   LDA     #&00
         STA     j46
         STA     j61
         STA     j44
         STA     j47
-        STA     j48
+        STA     offset
         STA     j5E
 jB66E   LDA     #&00
         STA     j45
@@ -4545,7 +4494,7 @@ jB66E   LDA     #&00
 jB674   JSR     jB7AF
 jB677   LDY     j45
         LDA     j0500,Y
-        STA     j2C
+        STA     atemp
         INC     j45
         CMP     #&0D
         RTS
@@ -4554,7 +4503,7 @@ jB686   LDA     #&00
         STA     j4E
         STA     j60
         STA     j5F
-        LDA     j2C
+        LDA     atemp
         CMP     #&0D
         BEQ     jB6E1
         CMP     #&2F
@@ -4581,7 +4530,7 @@ jB6B4   CMP     #&5B
         STY     j4A
         JSR     jB677
 jB6C7   JSR     jB7F3
-        LDA     j2C
+        LDA     atemp
         CMP     #&5D
         BNE     jB6C7
         DEC     j5E
@@ -4609,13 +4558,13 @@ jB6FC   LDA     j60
         CPX     #&0A
         BCS     jB686
         INC     j44
-        LDA     j48
+        LDA     offset
         STA     j0728,X
         LDA     j4E
         BNE     jB71B
         LDA     j47
         STA     j071E,X
-jB716   INC     j48
+jB716   INC     offset
 jB718   JMP     jB686
 jB71B   INC     j47
         LDA     j47
@@ -4624,7 +4573,7 @@ jB71B   INC     j47
         ORA     #&80
         STA     j071E,X
         LDA     #&00
-        STA     j48
+        STA     offset
         BEQ     jB718
 jB72E   BRK
         DATA    1,"Too many find multiples"
@@ -4633,7 +4582,7 @@ jB748   JSR     jB677
 jB74B   JSR     jB7AF
 jB74E   LDA     #&FF
         STA     j5E
-        LDA     j2C
+        LDA     atemp
         CMP     #&0D
         BEQ     jB7AD
         LDX     #&88
@@ -4697,7 +4646,7 @@ jB7DB   INC     j46
 jB7E0   BRK
         DATA    1,"Syntax incorrect"
         BRK
-jB7F3   LDA     j2C
+jB7F3   LDA     atemp
         CMP     #&7E
         BNE     jB812
         LDX     #&81
@@ -4733,7 +4682,7 @@ jB848   JSR     jB677
         JMP     jB7AF
 jB84E   JSR     jB87E
         STX     j49
-        LDA     j2C
+        LDA     atemp
         CMP     #&2D
         BNE     jB871
         INC     j5E
@@ -4753,8 +4702,8 @@ jB871   TXA
         LDX     j49
 jB87B   JMP     jB7AF
 jB87E   LDA     #&00
-        STA     j2D
-        LDA     j2C
+        STA     count
+        LDA     atemp
         BMI     jB8B8
         CMP     #&7C
         BNE     jB898
@@ -4762,7 +4711,7 @@ jB87E   LDA     #&00
         BEQ     jB8C5
         CMP     #&21
         BNE     jB8A5
-        INC     j2D
+        INC     count
         JSR     jB677
 jB898   CMP     #&24
         BEQ     jB8B6
@@ -4782,7 +4731,7 @@ jB8B6   LDA     #&0D
 jB8B8   PHA
         JSR     jB677
         PLA
-        LDY     j2D
+        LDY     count
         BEQ     jB8C3
         ORA     #&80
 jB8C3   TAX
@@ -4802,10 +4751,10 @@ jB8D4   LDY     #&00
         LDA     j5C
         BNE     jB903
         JSR     jBAFC
-        LDA     j10
-        STA     pointer
-        LDA     j11
-        STA     pointer+1
+        LDA     GS
+        STA     string
+        LDA     GS+1
+        STA     string+1
         INC     j5C
         LDA     j64
         STA     j68
@@ -4975,18 +4924,18 @@ jBA49   PLA
         RTS
 jBA4D   JSR     jBAFC
         LDA     j16
-        STA     j12
+        STA     GE
         LDA     j17
-        STA     j13
+        STA     GE+1
         LDA     j3B
-        STA     j38
-jBA5C   LDA     j10
+        STA     lnbufx
+jBA5C   LDA     GS
         CMP     j14
-        LDA     j11
+        LDA     GS+1
         SBC     j15
         BCS     jBABF
-        LDY     j38
-        INC     j38
+        LDY     lnbufx
+        INC     lnbufx
         LDA     j0600,Y
         BPL     jBAB3
         CMP     #&8C
@@ -4995,12 +4944,12 @@ jBA5C   LDA     j10
         BEQ     jBA87
         CMP     #&88
         BEQ     jBA83
-        INC     j38
+        INC     lnbufx
         LDA     j0601,Y
         JMP     jBAB3
 jBA83   LDY     #&00
         BEQ     jBACD
-jBA87   INC     j38
+jBA87   INC     lnbufx
         LDA     j0601,Y
         TAX
         LDA     j071E,X
@@ -5010,21 +4959,21 @@ jBA87   INC     j38
         CLC
         LDA     j0706,Y
         ADC     j0712,Y
-        STA     j06
+        STA     temp
         LDA     j070C,Y
         ADC     j0718,Y
         BNE     jBAAC
 jBAA6   LDA     j14
-        STA     j06
+        STA     temp
         LDA     j15
-jBAAC   STA     j07
+jBAAC   STA     temp+1
         LDY     j0728,X
-        LDA     (j06),Y
+        LDA     (temp),Y
 jBAB3   LDY     #&00
-        STA     (j10),Y
-        INC     j10
+        STA     (GS),Y
+        INC     GS
         BNE     jBA5C
-        INC     j11
+        INC     GS+1
         BNE     jBA5C
 
 jBABF   BRK
@@ -5035,22 +4984,22 @@ jBAC9   RTS
 jBACA   AND     #&7F
         TAY
 jBACD   LDA     j0706,Y
-        STA     j0A
+        STA     argp
         LDA     j070C,Y
-        STA     j0B
-        LDA     j10
-        STA     j0C
-        LDA     j11
-        STA     j0D
+        STA     argp+1
+        LDA     GS
+        STA     varp
+        LDA     GS+1
+        STA     varp+1
         CLC
         LDA     j0712,Y
         TAX
-        ADC     j10
-        STA     j10
+        ADC     GS
+        STA     GS
         LDA     j0718,Y
         TAY
-        ADC     j11
-        STA     j11
+        ADC     GS+1
+        STA     GS+1
         JSR     j8450
         JMP     jBA5C
 jBAF6   JSR     j9863
@@ -5065,18 +5014,18 @@ key_f4  JSR     j98E7
         JSR     j83DB
         JSR     j83D7
         LDX     #&00
-        LDA     (j06,X)
+        LDA     (temp,X)
         CMP     #&0D
         BNE     jBB38
         CMP     j0400
         BNE     jBB2E
         JMP     jBBFB
 jBB2E   LDA     j0400,Y
-        STA     (j06),Y
+        STA     (temp),Y
         INY
         BPL     jBB2E
         LDY     #&00
-jBB38   LDA     (j06),Y
+jBB38   LDA     (temp),Y
         STA     j0400,Y
         INY
         CPY     #&64
@@ -5085,25 +5034,25 @@ jBB38   LDA     (j06),Y
         JSR     jBF10
         JSR     j9A86
         LDA     j4B
-        STA     j36
-        LDA     HIMEM
+        STA     scrnX
+        LDA     tmax
         STA     j68
-        LDA     HIMEM+1
+        LDA     tmax+1
         STA     j69
         STA     j5C
-jBB59   LDX     j12
-        LDY     j13
+jBB59   LDX     GE
+        LDY     GE+1
 jBB5D   STX     j14
         STY     j15
         JSR     jB8D4
         BCS     jBBDD
         JSR     jBAFC
         JSR     jBE02
-        LDA     j51
-        STA     j37
+        LDA     BSM
+        STA     scrnY
         JSR     jAEC2
-        LDA     #&04
-        STA     j34
+        LDA     #harddo
+        STA     update
         JSR     j98E7
         DATA    "R(eplace), C(ontinue) or ESCAPE"
         NOP
@@ -5132,8 +5081,8 @@ jBBAD   CMP     #&72
 jBBD7   JSR     jBA4D
         JMP     jBB59
 jBBDD   JSR     j9933
-        LDA     #&05
-        STA     j34
+        LDA     #fullsc
+        STA     update
         JSR     jAEC2
         JSR     j9878
         LDX     #&0E
@@ -5153,17 +5102,17 @@ key_f5  JSR     jBD83
         JSR     j83DB
         JSR     j83D7
         LDX     #&00
-        LDA     (j06,X)
+        LDA     (temp,X)
         CMP     #&0D
         BNE     jBC43
         CMP     j0464
         BEQ     jBBFB
 jBC39   LDA     j0464,Y
-        STA     (j06),Y
+        STA     (temp),Y
         INY
         BPL     jBC39
         LDY     #&00
-jBC43   LDA     (j06),Y
+jBC43   LDA     (temp),Y
         STA     j0464,Y
         INY
         CPY     #&64
@@ -5174,8 +5123,8 @@ jBC43   LDA     (j06),Y
         STA     j4B
         STA     j4C
         STA     j5C
-jBC5B   LDX     j12
-        LDY     j13
+jBC5B   LDX     GE
+        LDY     GE+1
 jBC5F   STX     j14
         STY     j15
         JSR     jB8D4
@@ -5190,8 +5139,8 @@ jBC6E   LDA     j61
         JMP     jBC5F
 jBC79   JSR     jBA4D
         JMP     jBC5B
-jBC7F   LDX     pointer
-        LDY     pointer+1
+jBC7F   LDX     string
+        LDY     string+1
         JSR     j99F9
         JSR     j9933
         JSR     jAEC2
@@ -5206,9 +5155,9 @@ jBC7F   LDX     pointer
         RTS
 jBCA1   JSR     jB0EB
         LDX     #&04
-        STX     pointer
+        STX     string
 jBCA8   LDA     #&00
-        STA     pointer+1
+        STA     string+1
 jBCAC   SEC
         LDA     j4B
         SBC     jBCD7,X
@@ -5218,16 +5167,16 @@ jBCAC   SEC
         BCC     jBCC2
         STY     j4B
         STA     j4C
-        INC     pointer+1
+        INC     string+1
         BCS     jBCAC
-jBCC2   LDA     pointer+1
+jBCC2   LDA     string+1
         BNE     jBCCA
-        DEC     pointer
+        DEC     string
         BPL     jBCD3
 jBCCA   ORA     #&30
         JSR     OSWRCH
         LDA     #&00
-        STA     pointer
+        STA     string
 jBCD3   DEX
         BPL     jBCA8
         RTS
@@ -5241,10 +5190,10 @@ jBCEA   DEX
         BMI     jBD0B
         LDY     j18,X
         STY     j1C,X
-        CPY     j12
+        CPY     GE
         LDA     j1A,X
         STA     j1E,X
-        SBC     j13
+        SBC     GE+1
         BCS     jBCEA
         INC     j3F
         SEC
@@ -5257,11 +5206,11 @@ jBCEA   DEX
         BCS     jBCEA
 jBD0B   RTS
 jBD0C   SEC
-        LDA     j12
-        SBC     j10
+        LDA     GE
+        SBC     GS
         STA     j3C
-        LDA     j13
-        SBC     j11
+        LDA     GE+1
+        SBC     GS+1
         STA     j3D
         RTS
 jBD1A   JSR     j9A86
@@ -5295,9 +5244,9 @@ jBD51   LDA     markCnt
         BRK
         DATA    1,"Mark(s) set"
         BRK
-jBD63   LDA     j12
+jBD63   LDA     GE
         STA     j68
-        LDA     j13
+        LDA     GE+1
         STA     j69
         LDA     j3E
         BEQ     jBD82
@@ -5317,14 +5266,14 @@ jBD83   JSR     jBF10
         BEQ     jBDC9
         PHA
         LDA     j4B
-        STA     j36
+        STA     scrnX
         PLA
         RTS
 jBD94   JSR     jBD63
         BNE     jBDA0
         JSR     key_ctrl_up
-        LDX     HIMEM
-        LDY     HIMEM+1
+        LDX     tmax
+        LDY     tmax+1
 jBDA0   STX     j64
         STY     j65
         RTS
@@ -5332,14 +5281,14 @@ jBDA5   JSR     jBD1A
         CMP     #&02
         BNE     jBDC9
         LDA     j1D
-        CMP     j12
+        CMP     GE
         BNE     jBDC2
         LDA     j1F
-        CMP     j13
+        CMP     GE+1
         BNE     jBDC2
-        LDA     j10
+        LDA     GS
         STA     j1D
-        LDA     j11
+        LDA     GS+1
         STA     j1F
         INC     j3F
 jBDC2   LDA     j3F
@@ -5355,9 +5304,9 @@ key_f6  JSR     j9A86
         LDX     markCnt
         CPX     #&02
         BEQ     jBDC9
-        LDA     j12
+        LDA     GE
         STA     j18,X
-        LDA     j13
+        LDA     GE+1
         STA     j1A,X
         JSR     j9933
         INC     markCnt
@@ -5369,11 +5318,11 @@ key_shift_f8
         JSR     jBD1A
         JSR     jBD63
         BEQ     jBDC9
-        STX     j12
-        STY     j13
+        STX     GE
+        STY     GE+1
 jBE02   JSR     j9933
-        LDA     pointer
-        STA     j36
+        LDA     string
+        STA     scrnX
         RTS
 key_f7  JSR     jBDA5
         SEC
@@ -5385,30 +5334,30 @@ key_f7  JSR     jBDA5
         TAY
         LDA     j3F
         BEQ     jBE39
-        STX     pointer
-        STY     pointer+1
+        STX     string
+        STY     string+1
         SEC
         LDA     j18
-        SBC     pointer
+        SBC     string
         STA     j18
         LDA     j1A
-        SBC     pointer+1
+        SBC     string+1
         STA     j1A
         LDA     j19
-        SBC     pointer
+        SBC     string
         STA     j19
         LDA     j1B
-        SBC     pointer+1
+        SBC     string+1
         STA     j1B
 jBE39   JSR     j977B
         LDA     j1C
-        STA     j0A
+        STA     argp
         LDA     j1E
-        STA     j0B
-        STX     j12
-        STX     j0C
-        STY     j13
-        STY     j0D
+        STA     argp+1
+        STX     GE
+        STX     varp
+        STY     GE+1
+        STY     varp+1
         JSR     j9A24
         LDX     #&02
         STX     markCnt
@@ -5420,101 +5369,101 @@ key_shift_f7
         LDY     j1E
         LDA     j3F
         BEQ     jBE77
-        STX     j0A
-        STY     j0B
+        STX     argp
+        STY     argp+1
         LDA     j1D
-        STA     j0C
+        STA     varp
         LDA     j1F
-        STA     j0D
-        LDX     j10
-        LDY     j11
+        STA     varp+1
+        LDX     GS
+        LDY     GS+1
         JMP     jBE87
-jBE77   STX     j0C
-        STY     j0D
-        LDA     j12
-        STA     j0A
-        LDA     j13
-        STA     j0B
+jBE77   STX     varp
+        STY     varp+1
+        LDA     GE
+        STA     argp
+        LDA     GE+1
+        STA     argp+1
         LDX     j1D
         LDY     j1F
 jBE87   STX     j64
         STY     j65
 jBE8B   SEC
-        LDA     j0C
-        SBC     j0A
-        STA     j25
-        LDA     j0D
-        SBC     j0B
-        STA     j26
+        LDA     varp
+        SBC     argp
+        STA     size
+        LDA     varp+1
+        SBC     argp+1
+        STA     size+1
         LDA     j64
-        SBC     j0C
+        SBC     varp
         TAX
         LDA     j65
-        SBC     j0D
+        SBC     varp+1
         TAY
-        CPX     j25
-        SBC     j26
+        CPX     size
+        SBC     size+1
         BCS     jBEAC
-        STX     j25
-        STY     j26
-jBEAC   LDA     j25
-        ORA     j26
+        STX     size
+        STY     size+1
+jBEAC   LDA     size
+        ORA     size+1
         BEQ     jBEDE
         BCS     jBEC9
-        LDX     j0C
-        LDY     j0D
+        LDX     varp
+        LDY     varp+1
         JSR     jBEE5
         CLC
         TYA
-        ADC     j06
-        STA     j0A
+        ADC     temp
+        STA     argp
         LDA     #&00
-        ADC     j07
-        STA     j0B
+        ADC     temp+1
+        STA     argp+1
         BCC     jBE8B
 jBEC9   SEC
         LDA     j64
-        SBC     j25
+        SBC     size
         STA     j64
         TAX
         LDA     j65
-        SBC     j26
+        SBC     size+1
         STA     j65
         TAY
         JSR     jBEE5
         JMP     jBE8B
-jBEDE   LDA     #&04
-        STA     j34
+jBEDE   LDA     #harddo
+        STA     update
         JMP     j9933
-jBEE5   LDA     j0A
-        STA     j06
-        LDA     j0B
-        STA     j07
-        STX     j08
-        STY     j09
-        INC     j26
+jBEE5   LDA     argp
+        STA     temp
+        LDA     argp+1
+        STA     temp+1
+        STX     addr
+        STY     addr+1
+        INC     size+1
         LDY     #&00
-jBEF5   CPY     j25
+jBEF5   CPY     size
         BNE     jBEFD
-        DEC     j26
+        DEC     size+1
         BEQ     jBF1C
-jBEFD   LDA     (j06),Y
+jBEFD   LDA     (temp),Y
         TAX
-        LDA     (j08),Y
-        STA     (j06),Y
+        LDA     (addr),Y
+        STA     (temp),Y
         TXA
-        STA     (j08),Y
+        STA     (addr),Y
         INY
         BNE     jBEF5
-        INC     j07
-        INC     j09
+        INC     temp+1
+        INC     addr+1
         BNE     jBEF5
-jBF10   LDA     j36
+jBF10   LDA     scrnX
         STA     j4B
-        LDA     j40
-        CMP     j36
+        LDA     currle
+        CMP     scrnX
         BCS     jBF1C
-        STA     j36
+        STA     scrnX
 jBF1C   RTS
 
 jBF1D   DATA    "Roger Wilson",0
