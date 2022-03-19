@@ -392,18 +392,16 @@ j0732   EQU     &0732
 j0733   EQU     &0733
 jEA0B   EQU     &EA0B
 
-        ORG     &8000
-
 ; ==============================================================================
 ; = Start of Edit! (Rom header)
 ; ==============================================================================
 
+        ORG     &8000
         JMP     langua
-	IF	reladd
-	JMP     ((servic - origin) + &8000)
-        DFB     %11100010	; Language, Service, Relocation address.
-	ELSE
 	JMP	servic
+	IF	reladd
+	DFB     %11100010	; Language, Service, Relocation address.
+	ELSE
 	DFB	%11000010	; Language, Service.
 	FI
         DFB     >copyri
@@ -418,6 +416,63 @@ copyri  BRK
         DW	reladd
         DW	0
         FI
+
+; ==============================================================================
+; = ROM Service Entry
+; ==============================================================================
+
+servic  CMP     #&04
+        BEQ     unknow		; Unrecognised command.
+        CMP     #&09
+        BNE     servex		; Not *HELP.
+        TYA
+        PHA
+        LDY     #&08
+helpLO  LDA	helpin,Y
+        JSR     OSASCI
+        DEY
+        BPL     helpLO
+        PLA
+        TAY
+        LDA     #&09
+servex  RTS
+
+helpin  DATA    13,"4v "
+cmd     DATA    "TIDE",13
+
+unknow  TYA
+        PHA
+        TXA
+        PHA
+        LDX     #&03
+ucomLO  LDA     (&F2),Y
+        CMP     #"."
+        BEQ     ucommi
+        AND     #&DF
+        CMP     cmd,X
+        BNE     ucomEX
+        INY
+        DEX
+        BPL     ucomLO
+        LDA     (&F2),Y
+        CMP     #" "+1
+        BCC     ucommi
+ucomEX  PLA
+        TAX
+        PLA
+        TAY
+        LDA     #&04
+        RTS
+
+ucommi  PLA
+        TAX
+        LDA     #&8E		; Start this ROM as a language.
+        JMP     OSBYTE
+
+	IF	reladd
+svend
+	ORG	reladd+svend-&8000
+	FI
 
 ; ==============================================================================
 ; = Now the BRK handler
@@ -510,66 +565,6 @@ brkolp  LDA     (brkZP),Y
         INY
         BNE     brkolp
 brkox   JMP     OSNEWL
-
-; ==============================================================================
-; = ROM Service Entry
-; ==============================================================================
-
-servic  CMP     #&04
-        BEQ     unknow		; Unrecognised command.
-        CMP     #&09
-        BNE     servex		; Not *HELP.
-        TYA
-        PHA
-        LDY     #&08
-helpLO  IF	reladd
-	LDA     helpin-reladr)+&8000,Y
-	ELSE
-	LDA	helpin,Y
-	FI
-        JSR     OSASCI
-        DEY
-        BPL     helpLO
-        PLA
-        TAY
-        LDA     #&09
-servex  RTS
-
-helpin  DATA    13,"4v "
-cmd     DATA    "TIDE",13
-
-unknow  TYA
-        PHA
-        TXA
-        PHA
-        LDX     #&03
-ucomLO  LDA     (&F2),Y
-        CMP     #"."
-        BEQ     ucommi
-        AND     #&DF
-        IF	reladd
-        CMP	(cmd-reladd)+&8000,X
-        ELSE
-        CMP     cmd,X
-        FI
-        BNE     ucomEX
-        INY
-        DEX
-        BPL     ucomLO
-        LDA     (&F2),Y
-        CMP     #" "+1
-        BCC     ucommi
-ucomEX  PLA
-        TAX
-        PLA
-        TAY
-        LDA     #&04
-        RTS
-
-ucommi  PLA
-        TAX
-        LDA     #&8E		; Start this ROM as a language.
-        JMP     OSBYTE
 
 ; ==============================================================================
 ; = ROM Language Entry
