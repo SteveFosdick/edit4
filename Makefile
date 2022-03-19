@@ -1,3 +1,7 @@
+edit-nmos.rom edit-nmos.lst: nmos-defaults.asm bbcapi.asm edit-nmos.asm
+	laxasm -o edit-nmos.rom -l edit-nmos.lst nmos-defaults.asm bbcapi.asm edit-nmos.asm
+	cmp edit-nmos.rom edit-nmos.orig
+
 edit110.diff: rom.hex bin.hex
 	diff -u rom.hex bin.hex > edit110.diff
 

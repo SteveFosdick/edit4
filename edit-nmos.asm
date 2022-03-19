@@ -398,173 +398,190 @@ jEA0B   EQU     &EA0B
 ; = Start of Edit! (Rom header)
 ; ==============================================================================
 
-        JMP     language
-        JMP     service
-        DFB     &C2
-        DFB     >copyright
+        JMP     langua
+	IF	reladd
+	JMP     ((servic - origin) + &8000)
+        DFB     %11100010	; Language, Service, Relocation address.
+	ELSE
+	JMP	servic
+	DFB	%11000010	; Language, Service.
+	FI
+        DFB     >copyri
         DFB     &01
         ASC     "Edit"
         BRK
         ASC     "1.00"
-copyright
-        BRK
+copyri  BRK
         ASC     "(C)1984 Acorn"
         BRK
+        IF	reladd
+        DW	reladd
+        DW	0
+        FI
 
 ; ==============================================================================
 ; = Now the BRK handler
 ; ==============================================================================
 
+        ; Outputs 'brk' error message, & jumps to relevant re-entry
+        ; point. Detailed action depends on value of 'brkaction' on entry -
+        ; brkaction = 0 Moves cursor to editor status position,
+        ; outputs error message, then prompts for space
+        ; before jumping to editcont.
+        ; 1    Outputs error message, and jumps to starloop.
+        ; 2    resets to start of file and closes indexfile, then as 0
+
 brk     LDX     #&FF
         TXS                     ;  reset the stack pointer
-
         LDY     #&00
         STY     cursed
-
         LDA     #&7E
         JSR     OSBYTE          ;  Acknowledge the ESCAPE condition
-
-        LDA     brkact
+        LDA     BRKact
         CMP     #&FF
-        BNE     j8057
+        BNE     simBRK
 
-j8033   LDA     addr
-        BNE     j8039
+unret   LDA     addr
+        BNE     unretA
         DEC     addr+1
 
-j8039   DEC     addr
-        LDA     argp
-        BNE     j8041
-        DEC     argp+1
+unretA  DEC     addr
+        LDA     argP
+        BNE     unretB
+        DEC     argP + 1
 
-j8041   DEC     argp
-        LDA     (argp),Y
+unretB  DEC     argP
+        LDA     (argP),Y
         STA     (addr),Y
         LDA     addr
-        BNE     j8033
+        BNE     unret
         LDA     addr+1
         CMP     string+1
-        BNE     j8033
-        LDA     #&0D
+        BNE     unret
+        LDA     #cr
         STA     (tmax),Y
         LDA     #&00
 
-j8057   CMP     #&01
-        BEQ     j80D4
-        BCC     j8063
-        JSR     jAC88
+simBRK  CMP     #&01
+        BEQ     simBK1
+        BCC     norBRK
+        JSR     closeX
         JSR     key_ctrl_up
 
-j8063   JSR     vstrng
+norBRK  JSR     vstrng
         DATA    3,15
         NOP
-
-        JSR     j9921
-        JSR     brkPrint
+        JSR     csr0ST
+        JSR     supvbr
         JSR     cursorOff
         LDA     tutmod
         AND     #&07
         CMP     #&05
-        BEQ     j80A6
+        BEQ     nomess
         LDY     #&00
         LDA     (brkZP),Y
         CMP     #&01
-        BNE     j80A6
-
+        BNE     nomess
         JSR     vstrng
         DATA    "For help type: shf-f5 D RETURN",10,13
         NOP
 
-j80A6   JSR     j98F9
+nomess  JSR     strimo
         ASC     "Press ESCAPE to continue"
         NOP
 
-j80C2   JSR     OSRDCH
+esclop  JSR     OSRDCH
         CMP     #&1B
-        BNE     j80C2
+        BNE     esclop
 
-j80C9   LDA     #&7E
+esccon  LDA     #&7E
         JSR     OSBYTE
-        JSR     j9933
-        JMP     j8526
+        JSR     normal
+        JMP     editco
 
-j80D4   JSR     brkPrint
-        JMP     jB3F0
+simBK1  JSR     supvbr
+        JMP     starlo
 
-brkPrint
-        JSR     OSNEWL
-        LDY     #&01
-brkPrintLoop
-        LDA     (brkZP),Y
-        BEQ     brkPrintDone
+supvbr  JSR     OSNEWL
+brkoy   LDY     #&01
+brkolp  LDA     (brkZP),Y
+        BEQ     brkox
         JSR     OSASCI
         INY
-        BNE     brkPrintLoop
-brkPrintDone
-        JMP     OSNEWL
+        BNE     brkolp
+brkox   JMP     OSNEWL
 
-service CMP     #&04
-        BEQ     serviceCmd
+; ==============================================================================
+; = ROM Service Entry
+; ==============================================================================
+
+servic  CMP     #&04
+        BEQ     unknow		; Unrecognised command.
         CMP     #&09
-        BNE     serviceExit
+        BNE     servex		; Not *HELP.
         TYA
         PHA
         LDY     #&08
-serviceHelpLoop
-        LDA     help,Y
+helpLO  IF	reladd
+	LDA     helpin-reladr)+&8000,Y
+	ELSE
+	LDA	helpin,Y
+	FI
         JSR     OSASCI
         DEY
-        BPL     serviceHelpLoop
+        BPL     helpLO
         PLA
         TAY
         LDA     #&09
-serviceExit
-        RTS
+servex  RTS
 
-help    DATA    13,"4v "
+helpin  DATA    13,"4v "
 cmd     DATA    "TIDE",13
 
-serviceCmd
-        TYA
+unknow  TYA
         PHA
         TXA
         PHA
         LDX     #&03
-serviceCmdLoop
-        LDA     (&F2),Y
+ucomLO  LDA     (&F2),Y
         CMP     #"."
-        BEQ     languageStart
+        BEQ     ucommi
         AND     #&DF
+        IF	reladd
+        CMP	(cmd-reladd)+&8000,X
+        ELSE
         CMP     cmd,X
-        BNE     serviceCmdExit
+        FI
+        BNE     ucomEX
         INY
         DEX
-        BPL     serviceCmdLoop
+        BPL     ucomLO
         LDA     (&F2),Y
         CMP     #" "+1
-        BCC     languageStart
-serviceCmdExit
-        PLA
+        BCC     ucommi
+ucomEX  PLA
         TAX
         PLA
         TAY
         LDA     #&04
         RTS
 
-languageStart
-        PLA
+ucommi  PLA
         TAX
-        LDA     #&8E
+        LDA     #&8E		; Start this ROM as a language.
         JMP     OSBYTE
 
-language
-        CLI
+; ==============================================================================
+; = ROM Language Entry
+; ==============================================================================
+
+langua  CLI
         CLD
         LDX     #&FF
         TXS
-        LDA     #&03
+        LDA     #&03		; Turn off the printer (if ON)
         JSR     OSWRCH
-        LDA     #>brk
+        LDA     #>brk		; Install our BRK handler.
         STA     brkv
         LDA     #<brk
         STA     brkv+1
@@ -573,20 +590,28 @@ language
         LDY     #&00
         STY     indexH
         LDA     #&0D
-        STA     j04C8
-        CMP     (paje),Y
-        BNE     j8166
+        STA     nambuf
+        IF	cf8key
+        LDA	clterm
+        FI
+        CMP     (paje),Y	; Check for existing text.
+        BNE     EDIToy
         CMP     (tmax),Y
-        BNE     j8166
-        JSR     j848C
-j8166   LDY     #&10
+        BNE     EDIToy
+        JSR     memsta
+EDIToy  LDY     #&10		; Default mode and flags.
         STY     tutmod
-        LDA     #&0D
-        STA     j0400
-        STA     j0464
+        LDA     #cr
+        STA     frbuff
+        STA     grbuff
+        IF	cf8key
+        STA	clterm		; Line terminator initially CR.
+        FI
         STA     j0463
         STA     j04C7
         STA     j04FB
+
+        ; Define characters.
 
         JSR     vstrng
         DATA    &17,&87,&7E,&C3,&9D,&B1,&9D,&C3,&7E,&00,&00
@@ -608,10 +633,10 @@ j8166   LDY     #&10
         DATA    &17,&B2,&18,&18,&0C,&07,&00,&00,&00,&00,&00
         DATA    &17,&B3,&18,&18,&30,&E0,&00,&00,&00,&00,&00
         NOP
-        JMP     j851C
+        JMP     EDIT
 
-j8248   LDX     #&52
-        LDY     #&00
+XYscra  LDX     #>scratc
+        LDY     #<scratc
         RTS
 
 j824D   SEC
@@ -689,7 +714,7 @@ j82BB   TYA
 j82CF   LDA     #&06
         STA     j53
         RTS
-j82D4   JSR     jB0EB
+j82D4   JSR     starti
         LDY     #&FF
 j82D9   INY
         LDA     (j52),Y
@@ -716,7 +741,7 @@ j82FC   JSR     j824D
 j830E   JSR     isItDFS
         BCC     j832F
         LDA     #&05
-        JSR     j8248
+        JSR     XYscra
         JSR     OSFILE
         CMP     #&01
         BNE     j832F
@@ -737,7 +762,7 @@ j832F   LDA     addr
         STA     j57
         STA     j58
         LDA     #&FF
-        JSR     j8248
+        JSR     XYscra
         JSR     OSFILE
         LDA     #&00
         STA     j04FF
@@ -779,7 +804,7 @@ j837F   STA     j54,X
         LDA     j65
         STA     j61
         LDA     #&00
-        JSR     j8248
+        JSR     XYscra
         JMP     OSFILE
 j83A4   JSR     j83DB
         TYA
@@ -823,11 +848,11 @@ j83E9   JSR     vstrng
 j83F0   LDA     brkact
         CMP     #&02
         BNE     j83FC
-        JSR     jAC88
+        JSR     closeX
         JSR     key_ctrl_up
 j83FC   LDA     #&00
         STA     cursed
-j8400   JMP     j80C9
+j8400   JMP     esccon
 
 j8403   BIT     jFF
         BMI     j83E9
@@ -917,7 +942,7 @@ j847D   LDA     (argp),Y
         BNE     j847D
 j848B   RTS
 
-j848C   LDA     tstart+1
+memsta  LDA     tstart+1
         JSR     j84C4
         BCC     j84C3
         LDA     GS+1
@@ -1001,11 +1026,11 @@ j84FF   STX     GS
         STA     (tmax),Y
         JMP     key_ctrl_up
 
-j851C   JSR     jB24B
+EDIT    JSR     jB24B
 j851F   LDX     tstart
         LDY     tstart+1
 j8523   JSR     j84FF
-j8526   LDX     #&FF
+EDITco  LDX     #&FF
         TXS
         INX
         STX     brkact
@@ -1559,7 +1584,7 @@ j97D5   PHA
         DATA    &1A,&1E
         NOP
 
-        JSR     jB0EB
+        JSR     starti
         LDA     #&87
         STA     string+1
         LDA     #&4F
@@ -1640,8 +1665,8 @@ j986E   JSR     OSRDCH
 
 j9874   LDA     #&00
         STA     update
-j9878   JSR     j9921
-        JSR     jB0EB
+j9878   JSR     csr0ST
+        JSR     starti
         LDX     cursed
         BEQ     j9897
         JSR     vstrng
@@ -1675,7 +1700,7 @@ j98D1   JSR     j98E7
         DATA    "Type filename "
         NOP
         LDX     #&01
-        BNE     j98FB
+        BNE     strmfl
 
 j98E7   LDY     pagele
         INY
@@ -1685,11 +1710,11 @@ j98EF   LDY     pagele
         INY
         JSR     j9926
         LDX     #&01
-        BNE     j98FB
+        BNE     strmfl
 
-j98F9   LDX     #&00
+strimo  LDX     #&00
 
-j98FB   JSR     jB0EB
+strmfl  JSR     starti
         PLA
         STA     string
         PLA
@@ -1711,7 +1736,7 @@ j9918   JMP     (string)
 j991B   LDX     scrnX
         LDY     scrnY
         BPL     j9926
-j9921   LDY     pagele
+csr0ST  LDY     pagele
         INY
 j9924   LDX     #&00
 j9926   LDA     #&1F
@@ -1720,7 +1745,7 @@ j9926   LDA     #&1F
         JSR     OSWRCH
         TYA
         JMP     OSWRCH
-j9933   LDA     GS
+normal  LDA     GS
         STA     temp
         LDA     GS+1
         STA     temp+1
@@ -2107,11 +2132,11 @@ jA308   JSR     OSASCI
 jA311   LDA     (string),Y
         BPL     jA308
 
-        JSR     j98F9
+        JSR     strimo
         DATA    "Press SHIFT to continue"
         NOP
         JSR     jACB4
-        JMP     j8526
+        JMP     editco
 jA336   JMP     jA2FC
 key_f8  JSR     jBD51
         LDX     #&FF
@@ -2141,7 +2166,7 @@ jA394   JSR     jBAF6
         EOR     #&70
         BNE     jA394
         STA     pwtflg
-jA3A1   JSR     j848C
+jA3A1   JSR     memsta
         LDA     tstart
         STA     addr
         LDA     tstart+1
@@ -2304,14 +2329,14 @@ jA4E3   JSR     jA797
 jA4ED   JSR     jA761
         BIT     prtflg
         BPL     jA516
-        JSR     j98F9
+        JSR     strimo
         DATA    "Print done, press shift key"
         NOP
         JSR     jACB4
 jA516   JSR     vstrng
         DATA    3,15
         NOP
-        JSR     jAC88
+        JSR     closeX
         LDX     GS
         LDY     GS+1
         JMP     j8523
@@ -2777,7 +2802,7 @@ jA87F   LDA     addr
         JMP     jA812
 
 jA88C   STY     j4E
-        JSR     jAC88
+        JSR     closeX
         LDY     j4E
         RTS
 
@@ -2790,7 +2815,7 @@ jA897   LDX     j1B
 
 jA89F   CLC
         JSR     jA9B7
-        JSR     jAC88
+        JSR     closeX
         LDX     addr
         LDY     addr+1
         LDA     #&80
@@ -3121,7 +3146,7 @@ jAA41   LDA     addr
 jAACB   TAY
         LDA     j0600,Y
         STA     j52
-        JSR     j8248
+        JSR     XYscra
         LDA     #&0A
         JMP     OSWORD
 jAAD9   STY     j4E
@@ -3338,7 +3363,7 @@ jAC7A   JSR     jAB3C
         BCC     jAC4A
         LDA     #&0D
 jAC85   JMP     jAB3C
-jAC88   LDY     indexH
+closeX  LDY     indexH
         BEQ     jAC93
         LDA     #&00
         STA     indexH
@@ -3670,7 +3695,7 @@ jAF25   STA     scrnPY
 jAF27   LDA     #&00
         STA     update
         RTS
-jAF2C   JSR     j9921
+jAF2C   JSR     csr0ST
         LDA     #&0A
         JSR     OSWRCH
         LDY     #&FF
@@ -3881,7 +3906,7 @@ jB0C2   PHA
         PLA
         LDA     #&FF
         BNE     jB0BB
-jB0D0   JSR     jB0EB
+jB0D0   JSR     starti
         PLA
         JSR     OSWRCH
 jB0D7   LDA     #&11
@@ -3892,7 +3917,7 @@ jB0D7   LDA     #&11
         JSR     OSWRCH
         LDA     #&07
         JMP     OSWRCH
-jB0EB   JSR     vstrng
+starti  JSR     vstrng
         DFB     &11,&87,&11,&00
         NOP
         RTS
@@ -4137,7 +4162,7 @@ key_shift_f9
         LDA     #fullsc
         STA     update
         RTS
-jB2EC   JSR     j848C
+jB2EC   JSR     memsta
         JMP     j851F
 key_f2  JSR     j98E7
         DATA    "Type filename to load:"
@@ -4205,7 +4230,7 @@ key_shift_f2
         LDX     addr
         LDY     addr+1
         JSR     j99F9
-        JMP     j9933
+        JMP     normal
 key_f1  LDA     #&01
         STA     brkact
         JSR     j973F
@@ -4214,7 +4239,7 @@ key_f1  LDA     #&01
         NOP
         JSR     OSNEWL
         JSR     cursorOn
-jB3F0   LDA     #&2A
+starlo  LDA     #&2A
         JSR     OSWRCH
         LDA     #&00
         LDY     #<jB411
@@ -4227,7 +4252,7 @@ jB3F0   LDA     #&2A
         LDX     #&00
         LDY     #&05
         JSR     OSCLI
-        JMP     jB3F0
+        JMP     starlo
 
 jB411   DW      j0500
         DATA    &EE,&20,&FF
@@ -4255,7 +4280,7 @@ jB41B   JSR     vstrng
         ORA     #&80
         JSR     OSWRCH
 jB450   JSR     j9714
-        JMP     j8526
+        JMP     editco
 key_shift_copy
         LDA     #&01
         STA     cursed
@@ -4297,7 +4322,7 @@ jB4C4   PHA
         TAY
         LDA     jB481,Y
         PHA
-        JSR     j848C
+        JSR     memsta
         LDA     #&82
         JSR     OSBYTE
         INX
@@ -5080,7 +5105,7 @@ jBBAD   CMP     #&72
         JSR     jB74E
 jBBD7   JSR     jBA4D
         JMP     jBB59
-jBBDD   JSR     j9933
+jBBDD   JSR     normal
         LDA     #fullsc
         STA     update
         JSR     jAEC2
@@ -5142,7 +5167,7 @@ jBC79   JSR     jBA4D
 jBC7F   LDX     string
         LDY     string+1
         JSR     j99F9
-        JSR     j9933
+        JSR     normal
         JSR     jAEC2
         LDX     #&0E
         JSR     j98EF
@@ -5153,7 +5178,7 @@ jBC7F   LDX     string
         DATA    " found"
         NOP
         RTS
-jBCA1   JSR     jB0EB
+jBCA1   JSR     starti
         LDX     #&04
         STX     string
 jBCA8   LDA     #&00
@@ -5308,19 +5333,19 @@ key_f6  JSR     j9A86
         STA     j18,X
         LDA     GE+1
         STA     j1A,X
-        JSR     j9933
+        JSR     normal
         INC     markCnt
         JMP     j9878
 key_shift_f6
         JSR     jBD1A
-        JMP     j9933
+        JMP     normal
 key_shift_f8
         JSR     jBD1A
         JSR     jBD63
         BEQ     jBDC9
         STX     GE
         STY     GE+1
-jBE02   JSR     j9933
+jBE02   JSR     normal
         LDA     string
         STA     scrnX
         RTS
@@ -5362,7 +5387,7 @@ jBE39   JSR     j977B
         LDX     #&02
         STX     markCnt
         JSR     j9878
-        JMP     j9933
+        JMP     normal
 key_shift_f7
         JSR     jBDA5
         LDX     j1C
@@ -5434,7 +5459,7 @@ jBEC9   SEC
         JMP     jBE8B
 jBEDE   LDA     #harddo
         STA     update
-        JMP     j9933
+        JMP     normal
 jBEE5   LDA     argp
         STA     temp
         LDA     argp+1
